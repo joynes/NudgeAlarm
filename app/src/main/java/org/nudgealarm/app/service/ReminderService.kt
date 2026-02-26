@@ -329,9 +329,9 @@ class ReminderService : Service() {
                     eventLog.add(Event.SchedulerLoopIteration(detail = "TRIGGER (once): ${rule.id} '${rule.title}' (scheduled $triggerStr, key=$occurrenceKey)"))
                     fireReminder(rule, occurrenceKey, scheduledTime)
 
-                    // Auto-disable one-time reminder after firing
-                    reminderRepository.setEnabled(rule.id, false)
-                    eventLog.add(Event.Debug(detail = "One-time reminder ${rule.id} auto-disabled"))
+                    // Auto-delete one-time reminder after firing (prevents re-activation)
+                    reminderRepository.delete(rule.id)
+                    eventLog.add(Event.Debug(detail = "One-time reminder ${rule.id} auto-deleted"))
                 }
             }
         } else {
