@@ -29,9 +29,6 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.nudgealarm.app.ai.AiViewModel
-import org.nudgealarm.app.ai.model.ModelCatalog
-import org.nudgealarm.app.ai.model.ModelManager
 import org.nudgealarm.app.core.event.Event
 import org.nudgealarm.app.service.ReminderService
 import org.nudgealarm.app.storage.EventLogStore
@@ -47,7 +44,6 @@ import org.nudgealarm.app.ui.RoutinesScreen
 import org.nudgealarm.app.ui.SettingsScreen
 import org.nudgealarm.app.ui.SettingsViewModel
 import org.nudgealarm.app.ui.StatusScreen
-import org.nudgealarm.app.ui.ai.AiChatSheet
 import org.nudgealarm.app.ui.theme.NudgeAlarmTheme
 import org.nudgealarm.app.ui.theme.MegadriveCyan
 import org.nudgealarm.app.ui.theme.MegadriveGold
@@ -56,8 +52,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -172,16 +166,10 @@ fun checkNotificationPermission(context: Context): Boolean {
 fun NudgeAlarmApp() {
     val viewModel: MainViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
-    val aiViewModel: AiViewModel = viewModel()
-    val aiUiState by aiViewModel.uiState.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Main) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val eventLog = remember { EventLogStore(context) }
     val coroutineScope = rememberCoroutineScope()
-    val aiInstalledModels = remember(aiUiState) {
-        val manager = ModelManager(context)
-        ModelCatalog.models.filter { manager.isInstalled(it) }
-    }
 
     // Track notification permission status
     var hasNotificationPermission by remember { mutableStateOf(checkNotificationPermission(context)) }
@@ -220,16 +208,6 @@ fun NudgeAlarmApp() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        floatingActionButton = {
-            if (showBottomBar) {
-                FloatingActionButton(
-                    onClick = { aiViewModel.showSheet() },
-                    containerColor = Color(0xFF1565C0)
-                ) {
-                    Icon(Icons.Filled.SmartToy, contentDescription = "AI Chat", tint = Color.White)
-                }
-            }
-        },
         bottomBar = {
             if (showBottomBar) {
                 BottomNavBar(
@@ -462,28 +440,6 @@ fun NudgeAlarmApp() {
         }
     }
 
-    // AI Chat Sheet - overlaid above all screens
-    if (aiUiState.isSheetVisible) {
-        AiChatSheet(
-            uiState = aiUiState,
-            installedModels = aiInstalledModels,
-            onHide = { aiViewModel.hideSheet() },
-            onSend = { aiViewModel.sendMessage() },
-            onInputChange = { text -> aiViewModel.setInputText(text) },
-            onSelectModel = { modelId -> aiViewModel.selectModel(modelId) },
-            onManageModels = { aiViewModel.showModelDownloadScreen() },
-            onHideModelDownload = { aiViewModel.hideModelDownloadScreen() },
-            onStartDownload = { model -> aiViewModel.startDownload(model) },
-            onCancelDownload = { modelId -> aiViewModel.cancelDownload(modelId) },
-            onDeleteModel = { model -> aiViewModel.deleteModel(model) },
-            onHfTokenChange = { token -> aiViewModel.setHfToken(token) },
-            onConfirmToolCall = { id -> aiViewModel.confirmToolCall(id) },
-            onDenyToolCall = { id -> aiViewModel.denyToolCall(id) },
-            onClearConversation = { aiViewModel.clearConversation() },
-            onFetchRemoteModels = { aiViewModel.fetchRemoteModels() },
-            onSearchQueryChange = { q -> aiViewModel.searchRemoteModels(q) }
-        )
-    }
     }
 }
 

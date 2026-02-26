@@ -10,11 +10,13 @@ import android.os.PowerManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.nudgealarm.app.core.config.AppConfig
 import org.nudgealarm.app.core.config.ReminderConfig
 import org.nudgealarm.app.core.cron.CronExpression
@@ -404,36 +406,40 @@ class ReminderService : Service() {
         eventLog.add(Event.UserTappedDone(ruleId = ruleId))
 
         serviceScope.launch {
-            var nagState = nagRepository.markDoneByRuleId(ruleId)
+            withContext(NonCancellable) {
+                var nagState = nagRepository.markDoneByRuleId(ruleId)
 
-            if (nagState != null) {
-                // Active reminder - record to history
-                analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
-            } else {
-                // No active nag - this is an early completion from Today's Schedule
-                // Create a completed entry for the next scheduled time
-                val rule = config?.reminders?.find { it.id == ruleId }
-                if (rule != null) {
-                    val now = System.currentTimeMillis()
-                    val scheduledTime = if (rule.schedule.startsWith("once:")) {
-                        val ts = rule.schedule.removePrefix("once:").toLongOrNull() ?: now
-                        (ts / 60000) * 60000
-                    } else {
-                        val cron = CronExpression.parse(rule.schedule)
-                        val nextTrigger = cron.nextTriggerTime(now - 60000)
-                        (nextTrigger / 60000) * 60000
-                    }
-
-                    // Try to create the nag state entry
-                    val (isNew, occurrenceKey) = nagRepository.tryFire(rule, scheduledTime)
-                    if (isNew) {
-                        // Immediately mark as completed
-                        nagRepository.markDone(occurrenceKey)
-                        nagState = nagRepository.getByKey(occurrenceKey)
-                        if (nagState != null) {
-                            analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
+                if (nagState != null) {
+                    // Active reminder - record to history
+                    analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
+                } else {
+                    // No active nag - this is an early completion from Today's Schedule
+                    // Create a completed entry for the most recent scheduled time
+                    val rule = config?.reminders?.find { it.id == ruleId }
+                    if (rule != null) {
+                        val now = System.currentTimeMillis()
+                        val scheduledTime = if (rule.schedule.startsWith("once:")) {
+                            val ts = rule.schedule.removePrefix("once:").toLongOrNull() ?: now
+                            (ts / 60000) * 60000
+                        } else {
+                            val cron = CronExpression.parse(rule.schedule)
+                            // Use 2-hour lookback (same as scheduler) so we get today's trigger,
+                            // not tomorrow's, even if called minutes after the scheduled time
+                            val nextTrigger = cron.nextTriggerTime(now - (2 * 60 * 60 * 1000))
+                            (nextTrigger / 60000) * 60000
                         }
-                        eventLog.add(Event.Debug(detail = "Early completion for $ruleId scheduled at $scheduledTime"))
+
+                        // Try to create the nag state entry
+                        val (isNew, occurrenceKey) = nagRepository.tryFire(rule, scheduledTime)
+                        if (isNew) {
+                            // Immediately mark as completed
+                            nagRepository.markDone(occurrenceKey)
+                            nagState = nagRepository.getByKey(occurrenceKey)
+                            if (nagState != null) {
+                                analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
+                            }
+                            eventLog.add(Event.Debug(detail = "Early completion for $ruleId scheduled at $scheduledTime"))
+                        }
                     }
                 }
             }
@@ -446,15 +452,17 @@ class ReminderService : Service() {
         eventLog.add(Event.UserTappedCancel(ruleId = ruleId))
 
         serviceScope.launch {
-            val nagState = nagRepository.markCancelledByRuleId(ruleId)
-            if (nagState != null) {
-                // Record to history
-                analyticsRepository.recordCompletion(nagState, NagStatus.CANCELLED)
-            } else {
-                // Quest hasn't triggered yet - create a CANCELLED entry so it's filtered from Quest Log
-                val rule = config?.reminders?.find { it.id == ruleId }
-                if (rule != null) {
-                    nagRepository.createCancelledEntry(ruleId, rule.title)
+            withContext(NonCancellable) {
+                val nagState = nagRepository.markCancelledByRuleId(ruleId)
+                if (nagState != null) {
+                    // Record to history
+                    analyticsRepository.recordCompletion(nagState, NagStatus.CANCELLED)
+                } else {
+                    // Quest hasn't triggered yet - create a CANCELLED entry so it's filtered from Quest Log
+                    val rule = config?.reminders?.find { it.id == ruleId }
+                    if (rule != null) {
+                        nagRepository.createCancelledEntry(ruleId, rule.title)
+                    }
                 }
             }
 
@@ -466,7 +474,9 @@ class ReminderService : Service() {
         eventLog.add(Event.UserTappedSnooze(ruleId = ruleId, duration = "${duration.inWholeMinutes}m"))
 
         serviceScope.launch {
-            nagRepository.snoozeByRuleId(ruleId, duration)
+            withContext(NonCancellable) {
+                nagRepository.snoozeByRuleId(ruleId, duration)
+            }
             refreshCombinedNotification(silent = true) // user snoozed, update silently
         }
     }

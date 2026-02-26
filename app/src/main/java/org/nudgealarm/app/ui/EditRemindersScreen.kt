@@ -67,6 +67,12 @@ import org.nudgealarm.app.ui.theme.MegadriveOrange
 import org.nudgealarm.app.ui.theme.MegadrivePurple
 import org.nudgealarm.app.ui.theme.MegadriveRed
 import org.nudgealarm.app.core.cron.CronExpression
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 
 private enum class ScheduleMode { VECKA, MANAD, ENGANG, CRON }
 
@@ -611,6 +617,7 @@ private fun detectScheduleMode(schedule: String?): ScheduleMode {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestEditDialog(
     reminder: ReminderEntity?,
@@ -657,6 +664,8 @@ private fun QuestEditDialog(
         )
     }
     var cronError by remember { mutableStateOf<String?>(null) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     // One-time date fields
     val existingCal = if (isExistingOnce) {
@@ -732,29 +741,16 @@ private fun QuestEditDialog(
                 // TIME section (hidden in CRON mode since time is in the expression)
                 if (scheduleMode != ScheduleMode.CRON) {
                     Text("TIME", style = MaterialTheme.typography.labelMedium, color = MegadriveCyan)
-                    Row(
+                    OutlinedButton(
+                        onClick = { showTimePicker = true },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(1.dp, MegadriveCyan)
                     ) {
-                        OutlinedTextField(
-                            value = hour.toString().padStart(2, '0'),
-                            onValueChange = { v -> v.filter { it.isDigit() }.take(2).toIntOrNull()?.let { hour = it.coerceIn(0, 23) } },
-                            label = { Text("Hour") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadriveCyan, focusedLabelColor = MegadriveCyan)
-                        )
-                        Text(":", style = MaterialTheme.typography.headlineMedium, color = MegadriveGold)
-                        OutlinedTextField(
-                            value = minute.toString().padStart(2, '0'),
-                            onValueChange = { v -> v.filter { it.isDigit() }.take(2).toIntOrNull()?.let { minute = it.coerceIn(0, 59) } },
-                            label = { Text("Min") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadriveCyan, focusedLabelColor = MegadriveCyan)
+                        Text(
+                            String.format("%02d:%02d", hour, minute),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MegadriveCyan
                         )
                     }
                 }
@@ -763,37 +759,16 @@ private fun QuestEditDialog(
                     ScheduleMode.ENGANG -> {
                         // Date picker for one-time events
                         Text("DATE", style = MaterialTheme.typography.labelMedium, color = MegadrivePurple)
-                        Row(
+                        OutlinedButton(
+                            onClick = { showDatePicker = true },
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            shape = RoundedCornerShape(4.dp),
+                            border = BorderStroke(1.dp, MegadrivePurple)
                         ) {
-                            OutlinedTextField(
-                                value = onceYear,
-                                onValueChange = { v -> onceYear = v.filter { it.isDigit() }.take(4) },
-                                label = { Text("Year") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1.2f),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadrivePurple, focusedLabelColor = MegadrivePurple)
-                            )
-                            OutlinedTextField(
-                                value = onceMonth,
-                                onValueChange = { v -> onceMonth = v.filter { it.isDigit() }.take(2) },
-                                label = { Text("Month") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadrivePurple, focusedLabelColor = MegadrivePurple)
-                            )
-                            OutlinedTextField(
-                                value = onceDay,
-                                onValueChange = { v -> onceDay = v.filter { it.isDigit() }.take(2) },
-                                label = { Text("Day") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadrivePurple, focusedLabelColor = MegadrivePurple)
+                            Text(
+                                "$onceYear-${onceMonth.padStart(2, '0')}-${onceDay.padStart(2, '0')}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MegadrivePurple
                             )
                         }
                     }
@@ -1064,4 +1039,69 @@ private fun QuestEditDialog(
             }
         }
     )
+
+    // Time picker dialog
+    if (showTimePicker) {
+        val timeState = rememberTimePickerState(
+            initialHour = hour,
+            initialMinute = minute,
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            text = { TimePicker(state = timeState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    hour = timeState.hour
+                    minute = timeState.minute
+                    showTimePicker = false
+                }) { Text("OK", color = MegadriveGreen) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("CANCEL", color = MegadriveCyan)
+                }
+            }
+        )
+    }
+
+    // Date picker dialog (one-time quests)
+    if (showDatePicker) {
+        val initCal = java.util.Calendar.getInstance().apply {
+            set(
+                onceYear.toIntOrNull() ?: get(java.util.Calendar.YEAR),
+                (onceMonth.toIntOrNull() ?: (get(java.util.Calendar.MONTH) + 1)) - 1,
+                onceDay.toIntOrNull() ?: get(java.util.Calendar.DAY_OF_MONTH),
+                12, 0, 0
+            )
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val dateState = rememberDatePickerState(
+            initialSelectedDateMillis = initCal.timeInMillis
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dateState.selectedDateMillis?.let { ms ->
+                        // DatePicker returns UTC midnight — convert to local date fields
+                        val picked = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                        picked.timeInMillis = ms
+                        onceYear = picked.get(java.util.Calendar.YEAR).toString()
+                        onceMonth = (picked.get(java.util.Calendar.MONTH) + 1).toString()
+                        onceDay = picked.get(java.util.Calendar.DAY_OF_MONTH).toString()
+                    }
+                    showDatePicker = false
+                }) { Text("OK", color = MegadriveGreen) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("CANCEL", color = MegadriveCyan)
+                }
+            }
+        ) {
+            DatePicker(state = dateState)
+        }
+    }
 }
