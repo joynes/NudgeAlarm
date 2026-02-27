@@ -116,10 +116,10 @@ class NagRepositoryTest {
         val rule = createTestRule()
         repository.tryFire(rule, 1000L)
 
-        val key = repository.markDoneByRuleId(rule.id)
+        val result = repository.markDoneByRuleId(rule.id)
 
-        assertNotNull(key)
-        assertTrue(repository.isDone(key!!))
+        assertNotNull(result)
+        assertTrue(repository.isDone(result!!.occurrenceKey))
     }
 
     @Test
@@ -314,5 +314,138 @@ class NagRepositoryTest {
         // Only one entry in database
         val activeNags = repository.getActiveNags()
         assertEquals(1, activeNags.size)
+    }
+
+    // ── markCancelled / markCancelledByRuleId ─────────────────────────────────
+
+    @Test
+    fun markCancelled() = runTest {
+        val rule = createTestRule()
+        val (_, key) = repository.tryFire(rule, 1000L)
+
+        repository.markCancelled(key)
+
+        val fetched = repository.getByKey(key)
+        assertEquals(NagStatus.CANCELLED.name, fetched?.status)
+        assertFalse(repository.isRuleActive(rule.id))
+    }
+
+    @Test
+    fun markCancelledByRuleIdReturnsActiveNag() = runTest {
+        val rule = createTestRule()
+        repository.tryFire(rule, 1000L)
+
+        val result = repository.markCancelledByRuleId(rule.id)
+
+        assertNotNull(result)
+        val fetched = repository.getByKey(result!!.occurrenceKey)
+        assertEquals(NagStatus.CANCELLED.name, fetched?.status)
+    }
+
+    @Test
+    fun markCancelledByRuleIdReturnsNullWhenNoActiveNag() = runTest {
+        val result = repository.markCancelledByRuleId("nonexistent_rule")
+        assertNull(result)
+    }
+
+    @Test
+    fun markCancelledByRuleIdDoesNotAffectAlreadyCompletedNag() = runTest {
+        val rule = createTestRule()
+        val (_, key) = repository.tryFire(rule, 1000L)
+        repository.markDone(key)
+
+        // Already completed, not in active nags
+        val result = repository.markCancelledByRuleId(rule.id)
+        assertNull(result)
+    }
+
+    // ── getCompletedOrCancelledRuleIdsToday ───────────────────────────────────
+
+    @Test
+    fun getCompletedOrCancelledRuleIdsTodayIncludesCompletedToday() = runTest {
+        val rule = createTestRule()
+        val (_, key) = repository.tryFire(rule, System.currentTimeMillis())
+        repository.markDone(key)
+
+        val result = repository.getCompletedOrCancelledRuleIdsToday()
+        assertTrue(result.contains(rule.id))
+    }
+
+    @Test
+    fun getCompletedOrCancelledRuleIdsTodayIncludesCancelledToday() = runTest {
+        val rule = createTestRule()
+        val (_, key) = repository.tryFire(rule, System.currentTimeMillis())
+        repository.markCancelled(key)
+
+        val result = repository.getCompletedOrCancelledRuleIdsToday()
+        assertTrue(result.contains(rule.id))
+    }
+
+    @Test
+    fun getCompletedOrCancelledRuleIdsTodayExcludesActiveNags() = runTest {
+        val rule = createTestRule()
+        repository.tryFire(rule, System.currentTimeMillis())
+
+        val result = repository.getCompletedOrCancelledRuleIdsToday()
+        assertFalse(result.contains(rule.id))
+    }
+
+    @Test
+    fun getCompletedOrCancelledRuleIdsTodayExcludesOldEntries() = runTest {
+        val rule = createTestRule()
+        val (_, key) = repository.tryFire(rule, 1000L)
+        repository.markDone(key)
+
+        // Back-date the triggeredAt to 25 hours ago (before today's midnight)
+        val yesterday = System.currentTimeMillis() - (25 * 60 * 60 * 1000L)
+        database.nagStateDao().update(repository.getByKey(key)!!.copy(triggeredAt = yesterday))
+
+        val result = repository.getCompletedOrCancelledRuleIdsToday()
+        assertFalse(result.contains(rule.id))
+    }
+
+    @Test
+    fun getCompletedOrCancelledRuleIdsTodayReturnsEmptyWhenNone() = runTest {
+        assertTrue(repository.getCompletedOrCancelledRuleIdsToday().isEmpty())
+    }
+
+    // ── createCancelledEntry ──────────────────────────────────────────────────
+
+    @Test
+    fun createCancelledEntryCreatesEntryNotInActiveNags() = runTest {
+        repository.createCancelledEntry("my_rule", "My Quest")
+
+        // Should not appear in active nags
+        assertFalse(repository.isRuleActive("my_rule"))
+        assertEquals(0, repository.getActiveNags().size)
+    }
+
+    @Test
+    fun createCancelledEntryAppearsInCancelledTodaySet() = runTest {
+        repository.createCancelledEntry("my_rule", "My Quest")
+
+        val cancelled = repository.getCompletedOrCancelledRuleIdsToday()
+        assertTrue(cancelled.contains("my_rule"))
+    }
+
+    @Test
+    fun createCancelledEntryDoesNotAffectOtherActiveNags() = runTest {
+        val rule = createTestRule()
+        repository.tryFire(rule, System.currentTimeMillis())
+
+        repository.createCancelledEntry("other_rule", "Other Quest")
+
+        // Original rule still active
+        assertTrue(repository.isRuleActive(rule.id))
+        assertEquals(1, repository.getActiveNags().size)
+    }
+
+    @Test
+    fun createCancelledEntryWithNagCountZero() = runTest {
+        repository.createCancelledEntry("r1", "Quest Title")
+        // getCompletedOrCancelledRuleIdsToday queries the DAO directly;
+        // just verify it doesn't throw and returns the entry
+        val cancelled = repository.getCompletedOrCancelledRuleIdsToday()
+        assertTrue(cancelled.contains("r1"))
     }
 }

@@ -635,8 +635,6 @@ private fun QuestEditDialog(
     var hour by remember { mutableStateOf(parsed?.first ?: now.get(java.util.Calendar.HOUR_OF_DAY)) }
     var minute by remember { mutableStateOf(parsed?.second ?: now.get(java.util.Calendar.MINUTE)) }
     var selectedDays by remember { mutableStateOf(parsed?.third ?: setOf(now.get(java.util.Calendar.DAY_OF_WEEK) - 1)) }
-    var nagInterval by remember { mutableStateOf(reminder?.nagIntervalMinutes?.toString() ?: "5") }
-    var maxNags by remember { mutableStateOf(reminder?.maxNags?.toString() ?: "100") }
 
     // Monthly mode state
     var selectedDaysOfMonth by remember {
@@ -929,45 +927,41 @@ private fun QuestEditDialog(
                                 Text(nextPreview, color = MegadriveGreen, fontSize = 12.sp)
                             }
                         }
-                        Text("Examples:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val examples = listOf(
-                            "30 8 * * *" to "every day 08:30",
-                            "0 9 * * 1-5" to "weekdays 09:00",
-                            "0 9 */2 * *" to "every 2nd day 09:00",
-                            "0 9 */3 * *" to "every 3rd day 09:00",
-                            "0 9 1 * *" to "1st of month 09:00",
-                            "0 9 1,15 * *" to "1st & 15th 09:00",
-                            "0 9 1 */3 *" to "every 3rd month 09:00",
-                            "0 9 1 */2 *" to "every 2nd month 09:00",
-                            "0 18 * * 5" to "Fridays 18:00",
-                            "0 0 1 1,7 *" to "Jan & Jul 1st midnight",
-                            "*/15 * * * *" to "every 15 minutes",
-                        )
+                        val exNow = remember { java.util.Calendar.getInstance() }
+                        val exH = exNow.get(java.util.Calendar.HOUR_OF_DAY)
+                        val exM = exNow.get(java.util.Calendar.MINUTE)
+                        val exD = exNow.get(java.util.Calendar.DAY_OF_MONTH)
+                        val exTime = "${exM.toString().padStart(2,'0')} $exH"
+                        val exHM = "${exH.toString().padStart(2,'0')}:${exM.toString().padStart(2,'0')}"
+                        val examples = remember(exH, exM, exD) {
+                            listOf(
+                                "$exTime * * *"     to "every day $exHM",
+                                "$exTime * * 1-5"   to "weekdays $exHM",
+                                "$exTime */2 * *"   to "every 2nd day $exHM",
+                                "$exTime */3 * *"   to "every 3rd day $exHM",
+                                "$exTime $exD * *"  to "$exD of each month $exHM",
+                                "$exTime $exD */3 *" to "$exD every 3rd month $exHM",
+                                "$exTime * * 5"     to "Fridays $exHM",
+                                "*/15 * * * *"      to "every 15 minutes",
+                            )
+                        }
+                        Text("Examples (tap to use):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         examples.forEach { (cron, desc) ->
-                            Text("$cron  $desc", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        rawCronText = cron
+                                        cronError = null
+                                    }
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(cron, fontSize = 11.sp, color = MegadriveOrange)
+                                Text(desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = nagInterval,
-                        onValueChange = { nagInterval = it.filter { c -> c.isDigit() } },
-                        label = { Text("Nag (min)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadriveCyan, focusedLabelColor = MegadriveCyan)
-                    )
-                    OutlinedTextField(
-                        value = maxNags,
-                        onValueChange = { maxNags = it.filter { c -> c.isDigit() } },
-                        label = { Text("Max nags") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MegadriveCyan, focusedLabelColor = MegadriveCyan)
-                    )
                 }
 
                 // Delete button (only when editing)
@@ -1019,7 +1013,7 @@ private fun QuestEditDialog(
                             rawCronText.trim()
                         }
                     }
-                    onSave(title.trim(), schedule, nagInterval.toIntOrNull() ?: 5, maxNags.toIntOrNull() ?: 100)
+                    onSave(title.trim(), schedule, reminder?.nagIntervalMinutes ?: 5, reminder?.maxNags ?: 100)
                 },
                 enabled = title.isNotBlank() && when (scheduleMode) {
                     ScheduleMode.VECKA -> selectedDays.isNotEmpty()

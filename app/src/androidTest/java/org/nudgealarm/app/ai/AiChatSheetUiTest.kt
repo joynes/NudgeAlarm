@@ -76,7 +76,9 @@ class AiChatSheetUiTest {
                 onHfTokenChange = {},
                 onConfirmToolCall = onConfirm,
                 onDenyToolCall = onDeny,
-                onClearConversation = {}
+                onClearConversation = {},
+                onFetchRemoteModels = {},
+                onSearchQueryChange = {}
             )
         }
     }
