@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -23,6 +24,7 @@ import org.nudgealarm.app.ui.ai.AiChatSheet
 import org.nudgealarm.app.ui.ai.ToolConfirmationCard
 
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(maxSdkVersion = 35) // Espresso InputManager.getInstance() removed in API 36+
 class AiChatSheetUiTest {
 
     @get:Rule
@@ -182,6 +184,7 @@ class AiChatSheetUiTest {
 }
 
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(maxSdkVersion = 35) // Espresso InputManager.getInstance() removed in API 36+
 class ToolConfirmationCardUiTest {
 
     @get:Rule
