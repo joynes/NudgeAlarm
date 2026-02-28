@@ -27,28 +27,27 @@ object ChannelSetup {
         val settingsStore = SettingsStore(context)
         val reminderChannelId = "$REMINDER_CHANNEL_PREFIX${settingsStore.channelVersion}"
 
-        // Reminder channel - high importance for heads-up notifications
+        val isQuiet = settingsStore.quietMode
+        // Reminder channel - high importance for heads-up notifications; low when quiet
         val reminderChannel = NotificationChannel(
             reminderChannelId,
             "Reminders",
-            NotificationManager.IMPORTANCE_HIGH
+            if (isQuiet) NotificationManager.IMPORTANCE_LOW else NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Reminder notifications"
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            // Respect Do Not Disturb mode (don't bypass)
             setBypassDnd(false)
-            enableVibration(settingsStore.vibrationEnabled)
-            if (settingsStore.vibrationEnabled) {
+            val vibrate = !isQuiet && settingsStore.vibrationEnabled
+            enableVibration(vibrate)
+            if (vibrate) {
                 vibrationPattern = longArrayOf(0, 500, 250, 500)
             }
-            // Use getEffectiveSoundUri() to respect custom sound selection
-            val soundUri = settingsStore.getEffectiveSoundUri()
-            android.util.Log.d("ChannelSetup", "Creating channel with soundUri=$soundUri customUri=${settingsStore.customSoundUri} alarmSound=${settingsStore.alarmSound}")
+            val soundUri = if (isQuiet) null else settingsStore.getEffectiveSoundUri()
+            android.util.Log.d("ChannelSetup", "Creating channel quiet=$isQuiet soundUri=$soundUri")
             if (soundUri != null) {
                 setSound(
                     soundUri,
                     AudioAttributes.Builder()
-                        // Use notification volume instead of alarm volume
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build()

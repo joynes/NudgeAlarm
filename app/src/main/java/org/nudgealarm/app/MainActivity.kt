@@ -2,6 +2,7 @@ package org.nudgealarm.app
 
 import android.Manifest
 import android.app.ActivityManager
+import android.content.Intent
 import android.app.ApplicationExitInfo
 import android.app.NotificationManager
 import android.content.Context
@@ -47,18 +48,27 @@ import org.nudgealarm.app.ui.StatusScreen
 import org.nudgealarm.app.ui.theme.NudgeAlarmTheme
 import org.nudgealarm.app.ui.theme.MegadriveCyan
 import org.nudgealarm.app.ui.theme.MegadriveGold
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.nudgealarm.app.notification.ChannelSetup
+import org.nudgealarm.app.storage.SettingsStore
 
 enum class Screen {
     Main,
@@ -174,6 +184,9 @@ fun NudgeAlarmApp() {
     // Track notification permission status
     var hasNotificationPermission by remember { mutableStateOf(checkNotificationPermission(context)) }
 
+    val settingsStore = remember { SettingsStore(context) }
+    var quietMode by remember { mutableStateOf(settingsStore.quietMode) }
+
     LaunchedEffect(Unit) {
         eventLog.add(Event.AppForegrounded())
         eventLog.add(Event.Debug(detail = "NudgeAlarmApp composed, starting polling"))
@@ -212,6 +225,17 @@ fun NudgeAlarmApp() {
             if (showBottomBar) {
                 BottomNavBar(
                     currentScreen = currentScreen,
+                    quietMode = quietMode,
+                    onToggleQuietMode = {
+                        val newMode = !quietMode
+                        quietMode = newMode
+                        settingsStore.quietMode = newMode
+                        ChannelSetup.recreateReminderChannel(context)
+                        val intent = Intent(context, ReminderService::class.java).apply {
+                            action = ReminderService.ACTION_REFRESH_NOTIFICATION
+                        }
+                        context.startService(intent)
+                    },
                     onNavigate = { screen ->
                         if (currentScreen == Screen.EditReminders && screen != Screen.EditReminders) {
                             viewModel.saveCurrentGame()
@@ -446,8 +470,11 @@ fun NudgeAlarmApp() {
 @Composable
 private fun BottomNavBar(
     currentScreen: Screen,
+    quietMode: Boolean,
+    onToggleQuietMode: () -> Unit,
     onNavigate: (Screen) -> Unit
 ) {
+    Box {
     NavigationBar(
         containerColor = Color(0xFF1A1A2E)
     ) {
@@ -503,5 +530,21 @@ private fun BottomNavBar(
                 unselectedTextColor = Color.Gray
             )
         )
+    }
+    // Quiet mode toggle — overlaid in the top-right corner of the nav bar
+    IconButton(
+        onClick = onToggleQuietMode,
+        modifier = androidx.compose.ui.Modifier
+            .align(Alignment.TopEnd)
+            .padding(end = 2.dp, top = 2.dp)
+            .size(36.dp)
+    ) {
+        Icon(
+            imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
+            contentDescription = if (quietMode) "Unmute notifications" else "Mute notifications",
+            tint = if (quietMode) Color(0xFFFF4444) else Color.Gray,
+            modifier = androidx.compose.ui.Modifier.size(20.dp)
+        )
+    }
     }
 }

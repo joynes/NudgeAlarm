@@ -105,6 +105,7 @@ class SettingsStore(context: Context) {
         private const val KEY_CUSTOM_SOUND_URI = "custom_sound_uri"
         private const val KEY_CUSTOM_SOUND_NAME = "custom_sound_name"
         private const val KEY_CHANNEL_VERSION = "channel_version"
+        private const val KEY_QUIET_MODE = "quiet_mode"
     }
 
     /**
@@ -137,6 +138,11 @@ class SettingsStore(context: Context) {
     var customSoundName: String?
         get() = prefs.getString(KEY_CUSTOM_SOUND_NAME, null)
         set(value) = prefs.edit().putString(KEY_CUSTOM_SOUND_NAME, value).apply()
+
+    /** When true, notifications are delivered silently (no sound, no vibration, no heads-up). */
+    var quietMode: Boolean
+        get() = prefs.getBoolean(KEY_QUIET_MODE, false)
+        set(value) = prefs.edit().putBoolean(KEY_QUIET_MODE, value).apply()
 
     /**
      * Get the effective sound URI to use for notifications.

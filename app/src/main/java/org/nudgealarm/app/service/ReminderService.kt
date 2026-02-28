@@ -55,6 +55,7 @@ class ReminderService : Service() {
         const val ACTION_DONE_FROM_UI = "org.nudgealarm.app.ACTION_DONE_FROM_UI"
         const val ACTION_SNOOZE_FROM_UI = "org.nudgealarm.app.ACTION_SNOOZE_FROM_UI"
         const val ACTION_CANCEL_FROM_UI = "org.nudgealarm.app.ACTION_CANCEL_FROM_UI"
+        const val ACTION_REFRESH_NOTIFICATION = "org.nudgealarm.app.ACTION_REFRESH_NOTIFICATION"
         const val EXTRA_CONFIG_URI = "config_uri"
         const val EXTRA_RULE_ID = "rule_id"
         const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
@@ -152,6 +153,9 @@ class ReminderService : Service() {
             ACTION_CANCEL_FROM_UI -> {
                 val ruleId = intent.getStringExtra(EXTRA_RULE_ID)
                 if (ruleId != null) handleCancel(ruleId)
+            }
+            ACTION_REFRESH_NOTIFICATION -> {
+                serviceScope.launch { refreshCombinedNotification(silent = true) }
             }
             else -> {
                 // Service restarted by system, try to resume
