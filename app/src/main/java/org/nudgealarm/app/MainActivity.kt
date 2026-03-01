@@ -222,6 +222,18 @@ fun NudgeAlarmApp() {
         uri?.let { viewModel.saveToFile(it) }
     }
 
+    val dataExporter = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.exportAllData(it) {} }
+    }
+
+    val dataImporter = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importAllData(it) {} }
+    }
+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -337,6 +349,14 @@ fun NudgeAlarmApp() {
                     val result = viewModel.importFromClipboard(yaml)
                     onResult(result)
                 }
+            },
+            onExportData = {
+                val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                    .format(java.util.Date())
+                dataExporter.launch("nudgealarm_backup_$timestamp.json")
+            },
+            onImportData = {
+                dataImporter.launch(arrayOf("application/json", "*/*"))
             },
             onLoadPreset = { presetId -> viewModel.loadPreset(presetId) },
             onLoadSavedGame = { savedGame -> viewModel.loadSavedGame(savedGame) },

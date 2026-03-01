@@ -102,6 +102,8 @@ fun MainScreen(
     onRenameGame: (String) -> Unit,
     onExportToClipboard: (onResult: (String?) -> Unit) -> Unit,
     onImportFromClipboard: (yaml: String, onResult: (Result<Int>) -> Unit) -> Unit,
+    onExportData: () -> Unit,
+    onImportData: () -> Unit,
     onLoadPreset: (String) -> Unit,
     onLoadSavedGame: (org.nudgealarm.app.storage.SavedGame) -> Unit,
     onDeleteSavedGame: (String) -> Unit,
@@ -512,6 +514,18 @@ fun MainScreen(
                     RetroMenuItem("EVENT LOG [${uiState.events.size}]") {
                         onNavigateToEventLog()
                         onMenuDismiss()
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    RetroMenuItem("EXPORT DATA") {
+                        onMenuDismiss()
+                        onExportData()
+                    }
+                    RetroMenuItem("IMPORT DATA") {
+                        onMenuDismiss()
+                        onImportData()
                     }
                 }
             },

@@ -115,6 +115,9 @@ class AnalyticsRepositoryTest {
             override suspend fun getOutcomeCounts(startTime: Long, endTime: Long): OutcomeCounts? = null
             override suspend fun getEarliestTimestamp(): Long? = null
             override suspend fun getTotalCount(): Int = 0
+            override suspend fun getAll(): List<NagHistoryEntity> = emptyList()
+            override suspend fun insertAll(history: List<NagHistoryEntity>) {}
+            override suspend fun deleteAll() {}
         })
     }
 }

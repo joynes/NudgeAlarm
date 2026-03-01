@@ -23,6 +23,7 @@ import org.nudgealarm.app.database.NagRepository
 import org.nudgealarm.app.database.ReminderRepository
 import org.nudgealarm.app.service.ReminderService
 import org.nudgealarm.app.storage.AppStateStore
+import org.nudgealarm.app.storage.DataExportStore
 import org.nudgealarm.app.storage.EventLogStore
 import org.nudgealarm.app.storage.SavedGame
 import org.nudgealarm.app.storage.SavedGamesStore
@@ -71,6 +72,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val eventLogStore = EventLogStore(application)
     private val savedGamesStore = SavedGamesStore(application)
     private val appStateStore = AppStateStore(application)
+    private val dataExportStore = DataExportStore(application)
     private val reminderRepository: ReminderRepository
     private val nagRepository: NagRepository
 
@@ -862,6 +864,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 updateState()
             }
+        }
+    }
+
+    /**
+     * Export all database data + settings to a JSON file at the given URI.
+     */
+    fun exportAllData(uri: Uri, onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = dataExportStore.exportToUri(uri)
+            result.fold(
+                onSuccess = { count -> eventLogStore.add(Event.Debug(detail = "Exported $count quests to file")) },
+                onFailure = { e -> eventLogStore.add(Event.ConfigError(error = "Export failed: ${e.message}")) }
+            )
+            withContext(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
+    /**
+     * Import all database data + settings from a JSON file at the given URI.
+     */
+    fun importAllData(uri: Uri, onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = dataExportStore.importFromUri(uri)
+            result.fold(
+                onSuccess = { count ->
+                    eventLogStore.add(Event.Debug(detail = "Imported $count quests from file"))
+                    gameLoaded = count > 0
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(hasGameLoaded = count > 0, totalRulesCount = count)
+                        if (count > 0) restartService()
+                        onResult(result)
+                    }
+                },
+                onFailure = { e ->
+                    eventLogStore.add(Event.ConfigError(error = "Import failed: ${e.message}"))
+                    withContext(Dispatchers.Main) { onResult(result) }
+                }
+            )
         }
     }
 

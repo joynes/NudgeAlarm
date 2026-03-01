@@ -2,6 +2,7 @@ package org.nudgealarm.app.database
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 data class DailyAggregate(
@@ -100,4 +101,22 @@ interface NagHistoryDao {
      */
     @Query("SELECT COUNT(*) FROM nag_history")
     suspend fun getTotalCount(): Int
+
+    /**
+     * Get all history records (for export).
+     */
+    @Query("SELECT * FROM nag_history ORDER BY completedAt DESC")
+    suspend fun getAll(): List<NagHistoryEntity>
+
+    /**
+     * Insert all history records (for import).
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(history: List<NagHistoryEntity>)
+
+    /**
+     * Delete all history records (for import reset).
+     */
+    @Query("DELETE FROM nag_history")
+    suspend fun deleteAll()
 }

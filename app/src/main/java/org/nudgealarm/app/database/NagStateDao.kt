@@ -35,6 +35,24 @@ interface NagStateDao {
     suspend fun existsByKey(key: String): Int
 
     /**
+     * Get all nag states (all statuses, for export).
+     */
+    @Query("SELECT * FROM nag_states ORDER BY triggeredAt DESC")
+    suspend fun getAll(): List<NagStateEntity>
+
+    /**
+     * Insert all nag states (for import).
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(states: List<NagStateEntity>)
+
+    /**
+     * Delete all nag states (for import reset).
+     */
+    @Query("DELETE FROM nag_states")
+    suspend fun deleteAll()
+
+    /**
      * Insert a new nag state. Returns -1 if already exists (IGNORE strategy).
      * This provides atomic deduplication.
      */
@@ -103,9 +121,4 @@ interface NagStateDao {
     @Query("SELECT * FROM nag_states WHERE status IN ('COMPLETED', 'CANCELLED', 'EXPIRED') AND triggeredAt >= :since")
     suspend fun getCompletedOrCancelledSince(since: Long): List<NagStateEntity>
 
-    /**
-     * Clear all nag states (for testing or reset).
-     */
-    @Query("DELETE FROM nag_states")
-    suspend fun deleteAll()
 }
