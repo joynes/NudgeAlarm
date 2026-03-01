@@ -93,6 +93,8 @@ val PRESET_CONFIGS = listOf(
 fun MainScreen(
     uiState: MainUiState,
     hasNotificationPermission: Boolean,
+    showMenu: Boolean,
+    onMenuDismiss: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
     onSelectFile: () -> Unit,
     onSaveGame: () -> Unit,
@@ -115,7 +117,6 @@ fun MainScreen(
     onCancel: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showMenuDialog by remember { mutableStateOf(false) }
     var showPresetDialog by remember { mutableStateOf(false) }
     var showNewGameDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -143,8 +144,7 @@ fun MainScreen(
         // === HEADER - Like a game title screen ===
         RetroHeader(
             isRunning = uiState.isServiceRunning,
-            currentGameName = uiState.currentGameName,
-            onMenuClick = { showMenuDialog = true }
+            currentGameName = uiState.currentGameName
         )
 
         // === PERMISSION WARNING - Very prominent! ===
@@ -458,9 +458,9 @@ fun MainScreen(
     }
 
     // === MENU DIALOG - Pause menu ===
-    if (showMenuDialog) {
+    if (showMenu) {
         AlertDialog(
-            onDismissRequest = { showMenuDialog = false },
+            onDismissRequest = onMenuDismiss,
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
@@ -476,7 +476,7 @@ fun MainScreen(
                     if (uiState.isServiceRunning) {
                         RetroMenuItem("STOP GAME") {
                             onStopService()
-                            showMenuDialog = false
+                            onMenuDismiss()
                         }
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -486,22 +486,22 @@ fun MainScreen(
                     if (uiState.hasGameLoaded || uiState.isServiceRunning) {
                         RetroMenuItem("RENAME GAME") {
                             renameGameName = uiState.currentGameName ?: ""
-                            showMenuDialog = false
+                            onMenuDismiss()
                             showRenameDialog = true
                         }
                     }
                     RetroMenuItem("SELECT GAME") {
-                        showMenuDialog = false
+                        onMenuDismiss()
                         showPresetDialog = true
                     }
                     RetroMenuItem("LOAD FROM FILE") {
                         onSelectFile()
-                        showMenuDialog = false
+                        onMenuDismiss()
                     }
                     // Only show Save/Share if a game is loaded with quests
                     if ((uiState.hasGameLoaded || uiState.isServiceRunning) && uiState.totalRulesCount > 0) {
                         RetroMenuItem("SAVE / SHARE") {
-                            showMenuDialog = false
+                            onMenuDismiss()
                             showSaveDialog = true
                         }
                     }
@@ -511,13 +511,13 @@ fun MainScreen(
                     )
                     RetroMenuItem("EVENT LOG [${uiState.events.size}]") {
                         onNavigateToEventLog()
-                        showMenuDialog = false
+                        onMenuDismiss()
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showMenuDialog = false }) {
+                TextButton(onClick = onMenuDismiss) {
                     Text("< BACK", color = MegadriveCyan)
                 }
             }
@@ -1271,8 +1271,7 @@ private fun SnoozeAllDialog(
 @Composable
 private fun RetroHeader(
     isRunning: Boolean,
-    currentGameName: String?,
-    onMenuClick: () -> Unit
+    currentGameName: String?
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1321,25 +1320,11 @@ private fun RetroHeader(
                 }
             }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Button(
-                onClick = onMenuClick,
-                shape = RoundedCornerShape(4.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MegadrivePurple),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "MENU",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White
-                )
-            }
-            Text(
-                text = "v$APP_VERSION",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = "v$APP_VERSION",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
