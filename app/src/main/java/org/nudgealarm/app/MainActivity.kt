@@ -48,18 +48,27 @@ import org.nudgealarm.app.ui.StatusScreen
 import org.nudgealarm.app.ui.theme.NudgeAlarmTheme
 import org.nudgealarm.app.ui.theme.MegadriveCyan
 import org.nudgealarm.app.ui.theme.MegadriveGold
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import org.nudgealarm.app.notification.ChannelSetup
@@ -181,6 +190,7 @@ fun NudgeAlarmApp() {
 
     val settingsStore = remember { SettingsStore(context) }
     var quietMode by remember { mutableStateOf(settingsStore.quietMode) }
+    var showShareDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         eventLog.add(Event.AppForegrounded())
@@ -221,6 +231,7 @@ fun NudgeAlarmApp() {
                 BottomNavBar(
                     currentScreen = currentScreen,
                     quietMode = quietMode,
+                    onShare = { showShareDialog = true },
                     onToggleQuietMode = {
                         val newMode = !quietMode
                         quietMode = newMode
@@ -459,6 +470,70 @@ fun NudgeAlarmApp() {
         }
     }
 
+    // Share dialog
+    if (showShareDialog) {
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = { Text("Share / Save") },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("Share via…") },
+                        supportingContent = { Text("Send the quest file to another app") },
+                        leadingContent = { Icon(Icons.Filled.Share, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            showShareDialog = false
+                            val gameName = uiState.currentGameName ?: "NudgeAlarm_Game"
+                            val fileName = gameName.replace(Regex("[^a-zA-Z0-9_åäöÅÄÖ ]"), "_").replace(" ", "_") + ".yaml"
+                            val internalFile = java.io.File(context.filesDir, "game_${uiState.currentGameId}.yaml")
+                            val shareFile = java.io.File(context.cacheDir, fileName)
+                            if (internalFile.exists()) internalFile.copyTo(shareFile, overwrite = true)
+                            else {
+                                val presetFile = java.io.File(context.filesDir, "${uiState.currentGameId}.yaml")
+                                if (presetFile.exists()) presetFile.copyTo(shareFile, overwrite = true)
+                                else java.io.File(context.filesDir, "custom_config.yaml").takeIf { it.exists() }?.copyTo(shareFile, overwrite = true)
+                            }
+                            if (shareFile.exists()) {
+                                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", shareFile)
+                                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/x-yaml"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_SUBJECT, "NudgeAlarm: $gameName")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }, "Share $gameName"))
+                            }
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Save to file") },
+                        supportingContent = { Text("Export as YAML to local storage") },
+                        leadingContent = { Icon(Icons.Filled.Save, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            showShareDialog = false
+                            val gameName = uiState.currentGameName ?: "NudgeAlarm_Game"
+                            fileSaver.launch(gameName.replace(Regex("[^a-zA-Z0-9]"), "_") + ".yaml")
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Copy to clipboard") },
+                        supportingContent = { Text("Copy quest config as YAML text") },
+                        leadingContent = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            showShareDialog = false
+                            coroutineScope.launch {
+                                val yaml = viewModel.exportToClipboard()
+                                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("NudgeAlarm quests", yaml))
+                            }
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showShareDialog = false }) { Text("Cancel") } }
+        )
+    }
+
     }
 }
 
@@ -466,6 +541,7 @@ fun NudgeAlarmApp() {
 private fun BottomNavBar(
     currentScreen: Screen,
     quietMode: Boolean,
+    onShare: () -> Unit,
     onToggleQuietMode: () -> Unit,
     onNavigate: (Screen) -> Unit
 ) {
@@ -507,6 +583,20 @@ private fun BottomNavBar(
                 selectedIconColor = MegadriveGold,
                 selectedTextColor = MegadriveGold,
                 indicatorColor = MegadriveGold.copy(alpha = 0.15f),
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray
+            )
+        )
+        // Share button
+        NavigationBarItem(
+            selected = false,
+            onClick = onShare,
+            icon = { Icon(Icons.Filled.Share, contentDescription = "Share") },
+            label = { Text("SHARE", fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = MegadriveCyan,
+                selectedTextColor = MegadriveCyan,
+                indicatorColor = MegadriveCyan.copy(alpha = 0.15f),
                 unselectedIconColor = Color.Gray,
                 unselectedTextColor = Color.Gray
             )
