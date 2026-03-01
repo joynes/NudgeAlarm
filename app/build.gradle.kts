@@ -21,8 +21,8 @@ android {
         applicationId = "org.nudgealarm.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 111
-        versionName = "1.111"
+        versionCode = 112
+        versionName = "1.112"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -38,7 +38,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -53,14 +54,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-    packaging {
-        resources {
-            pickFirsts += listOf(
-                "lib/arm64-v8a/libc++_shared.so",
-                "lib/x86_64/libc++_shared.so"
-            )
-        }
     }
 }
 
@@ -98,11 +91,6 @@ dependencies {
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 
-    // Local AI inference
-    implementation(libs.mediapipe.tasks.genai)
-
-    // Background downloads
-    implementation(libs.androidx.work.runtime.ktx)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
