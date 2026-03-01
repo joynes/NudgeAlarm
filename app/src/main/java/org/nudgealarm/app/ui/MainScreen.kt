@@ -1259,7 +1259,7 @@ private fun SnoozeAllDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf(360 to "6H", 720 to "12H", 1440 to "24H").forEach { (minutes, label) ->
+                    listOf(360 to "6H", 720 to "12H", 1200 to "20H").forEach { (minutes, label) ->
                         OutlinedButton(
                             onClick = { onSnooze(minutes) },
                             modifier = Modifier.weight(1f),
@@ -1515,7 +1515,7 @@ private fun ActiveQuestCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                listOf(15 to "15M", 60 to "1H", 180 to "3H", 1440 to "24H").forEach { (minutes, label) ->
+                listOf(15 to "15M", 60 to "1H", 180 to "3H", 1200 to "20H").forEach { (minutes, label) ->
                     FeedbackOutlinedButton(
                         onClick = { onSnooze(minutes) },
                         modifier = Modifier.weight(1f),
@@ -1672,7 +1672,7 @@ private fun ScheduledQuestRow(
                         listOf(
                             360 to "6H",
                             720 to "12H",
-                            1440 to "24H"
+                            1200 to "20H"
                         ).forEach { (minutes, label) ->
                             FeedbackOutlinedButton(
                                 onClick = {
