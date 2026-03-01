@@ -198,6 +198,7 @@ fun NudgeAlarmApp() {
     val settingsStore = remember { SettingsStore(context) }
     var quietMode by remember { mutableStateOf(settingsStore.quietMode) }
     var showMenuDialog by remember { mutableStateOf(false) }
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     LaunchedEffect(Unit) {
         eventLog.add(Event.AppForegrounded())
@@ -231,7 +232,7 @@ fun NudgeAlarmApp() {
     val dataImporter = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
-        uri?.let { viewModel.importAllData(it) {} }
+        uri?.let { pendingImportUri = it }
     }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -253,6 +254,42 @@ fun NudgeAlarmApp() {
         }
         context.startService(intent)
         Unit
+    }
+
+    // Import confirmation dialog — shown after user picks a file
+    pendingImportUri?.let { uri ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+            title = {
+                androidx.compose.material3.Text(
+                    "!! VARNING !!",
+                    color = org.nudgealarm.app.ui.theme.MegadriveRed,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                androidx.compose.material3.Text(
+                    "Import kommer RADERA all befintlig data — alla quests, historik och inställningar ersätts av filen du valt.\n\nDetta går inte att ångra.",
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        viewModel.importAllData(uri) {}
+                        pendingImportUri = null
+                    }
+                ) {
+                    androidx.compose.material3.Text("JA, IMPORTERA", color = org.nudgealarm.app.ui.theme.MegadriveRed)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { pendingImportUri = null }) {
+                    androidx.compose.material3.Text("AVBRYT", color = org.nudgealarm.app.ui.theme.MegadriveCyan)
+                }
+            }
+        )
     }
 
     Scaffold(
