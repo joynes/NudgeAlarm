@@ -49,32 +49,17 @@ import org.nudgealarm.app.ui.theme.NudgeAlarmTheme
 import org.nudgealarm.app.ui.theme.MegadriveCyan
 import org.nudgealarm.app.ui.theme.MegadriveGold
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import org.nudgealarm.app.ui.theme.MegadrivePurple
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -295,16 +280,6 @@ fun NudgeAlarmApp() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            if (showBottomBar) {
-                AppTopBar(
-                    showMenuButton = currentScreen == Screen.Main,
-                    quietMode = quietMode,
-                    onToggleQuietMode = toggleQuietMode,
-                    onMenuClick = { showMenuDialog = true }
-                )
-            }
-        },
         bottomBar = {
             if (showBottomBar) {
                 BottomNavBar(
@@ -324,6 +299,9 @@ fun NudgeAlarmApp() {
         Screen.Main -> MainScreen(
             uiState = uiState,
             hasNotificationPermission = hasNotificationPermission,
+            quietMode = quietMode,
+            onToggleQuietMode = toggleQuietMode,
+            onMenuClick = { showMenuDialog = true },
             showMenu = showMenuDialog,
             onMenuDismiss = { showMenuDialog = false },
             onRequestNotificationPermission = {
@@ -547,43 +525,6 @@ fun NudgeAlarmApp() {
         }
     }
 
-    }
-}
-
-@Composable
-private fun AppTopBar(
-    showMenuButton: Boolean,
-    quietMode: Boolean,
-    onToggleQuietMode: () -> Unit,
-    onMenuClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1A1A2E))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onToggleQuietMode, modifier = Modifier.size(40.dp)) {
-            Icon(
-                imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
-                contentDescription = if (quietMode) "Unmute" else "Mute",
-                tint = if (quietMode) Color(0xFFFF4444) else Color.Gray,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        if (showMenuButton) {
-            Button(
-                onClick = onMenuClick,
-                shape = RoundedCornerShape(4.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MegadrivePurple),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("MENU", style = MaterialTheme.typography.labelLarge, color = Color.White)
-            }
-        }
     }
 }
 

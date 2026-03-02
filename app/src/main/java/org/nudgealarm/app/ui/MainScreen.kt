@@ -27,6 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -93,6 +95,9 @@ val PRESET_CONFIGS = listOf(
 fun MainScreen(
     uiState: MainUiState,
     hasNotificationPermission: Boolean,
+    quietMode: Boolean,
+    onToggleQuietMode: () -> Unit,
+    onMenuClick: () -> Unit,
     showMenu: Boolean,
     onMenuDismiss: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
@@ -146,7 +151,10 @@ fun MainScreen(
         // === HEADER - Like a game title screen ===
         RetroHeader(
             isRunning = uiState.isServiceRunning,
-            currentGameName = uiState.currentGameName
+            currentGameName = uiState.currentGameName,
+            quietMode = quietMode,
+            onToggleQuietMode = onToggleQuietMode,
+            onMenuClick = onMenuClick
         )
 
         // === PERMISSION WARNING - Very prominent! ===
@@ -1285,7 +1293,10 @@ private fun SnoozeAllDialog(
 @Composable
 private fun RetroHeader(
     isRunning: Boolean,
-    currentGameName: String?
+    currentGameName: String?,
+    quietMode: Boolean,
+    onToggleQuietMode: () -> Unit,
+    onMenuClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1334,11 +1345,25 @@ private fun RetroHeader(
                 }
             }
         }
-        Text(
-            text = "v$APP_VERSION",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onToggleQuietMode, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
+                    contentDescription = if (quietMode) "Unmute" else "Mute",
+                    tint = if (quietMode) Color(0xFFFF4444) else Color.Gray,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Button(
+                onClick = onMenuClick,
+                shape = RoundedCornerShape(4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MegadrivePurple),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Text("MENU", style = MaterialTheme.typography.labelLarge, color = Color.White)
+            }
+        }
     }
 }
 
