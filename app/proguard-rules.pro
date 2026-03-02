@@ -30,9 +30,15 @@
 -keep class org.nudgealarm.app.database.** { *; }
 
 # Keep Gson serialization
+# Generic signatures required for TypeToken (Gson 2.10+ + R8)
+-keepattributes Signature
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }
+-keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
+-keep class com.google.gson.** { *; }
+-dontwarn sun.misc.**
 
 # Keep stack traces readable
 -keepattributes SourceFile,LineNumberTable

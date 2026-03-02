@@ -257,21 +257,22 @@ fun NudgeAlarmApp() {
     }
 
     // Import confirmation dialog — shown after user picks a file
-    pendingImportUri?.let { uri ->
+    if (pendingImportUri != null) {
+        val uri = pendingImportUri!!
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { pendingImportUri = null },
-            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
-                androidx.compose.material3.Text(
+                Text(
                     "!! VARNING !!",
                     color = org.nudgealarm.app.ui.theme.MegadriveRed,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
-                androidx.compose.material3.Text(
+                Text(
                     "Import kommer RADERA all befintlig data — alla quests, historik och inställningar ersätts av filen du valt.\n\nDetta går inte att ångra.",
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             confirmButton = {
@@ -281,12 +282,12 @@ fun NudgeAlarmApp() {
                         pendingImportUri = null
                     }
                 ) {
-                    androidx.compose.material3.Text("JA, IMPORTERA", color = org.nudgealarm.app.ui.theme.MegadriveRed)
+                    Text("JA, IMPORTERA", color = org.nudgealarm.app.ui.theme.MegadriveRed)
                 }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { pendingImportUri = null }) {
-                    androidx.compose.material3.Text("AVBRYT", color = org.nudgealarm.app.ui.theme.MegadriveCyan)
+                    Text("AVBRYT", color = MegadriveCyan)
                 }
             }
         )
