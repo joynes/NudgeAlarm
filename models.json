@@ -1,0 +1,20 @@
+[
+  {
+    "id": "gemma3_1b",
+    "name": "Gemma 3 1B Instruct (INT4)",
+    "description": "Google's Gemma 3 1B instruction-tuned for MediaPipe. INT4 quantized. Accept license at litert-community/Gemma3-1B-IT on HuggingFace. ~0.6 GB.",
+    "sizeBytes": 650000000,
+    "huggingFaceUrl": "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.task",
+    "filename": "gemma3-1b-it-int4.task",
+    "requiresHfToken": true
+  },
+  {
+    "id": "gemma2_2b",
+    "name": "Gemma 2 2B Instruct (Q8)",
+    "description": "Google's Gemma 2 2B instruction-tuned for MediaPipe. Q8 quantized (larger). Accept license at litert-community/Gemma2-2B-IT on HuggingFace. ~2.5 GB.",
+    "sizeBytes": 2500000000,
+    "huggingFaceUrl": "https://huggingface.co/litert-community/Gemma2-2B-IT/resolve/main/gemma2_q8_multi-prefill-seq_ekv1280.task",
+    "filename": "gemma2-2b-it-q8.task",
+    "requiresHfToken": true
+  }
+]

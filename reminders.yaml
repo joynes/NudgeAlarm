@@ -1,0 +1,18 @@
+reminders:
+  - id: kram_benjamin_morgon
+    title: "Kräm Benjamin morgon"
+    schedule: "10 7 * * 1-5"      # Weekdays at 07:10
+    nag_interval: 5m
+    max_nags: 100
+    sound: alarm
+    vibration: strong
+    snooze_options:
+      - 5m
+      - 15m
+      - 1h
+
+  - id: vitamintabletter
+    title: "Vitamintabletter"
+    schedule: "0 18 * * *"        # Daily at 18:00
+    nag_interval: 5m
+    max_nags: 100
