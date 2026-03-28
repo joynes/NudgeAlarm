@@ -1,3 +1,49 @@
-Efter varje ändring ska du commita ,ska du b    umpa ver    sionsnummerdu ska köra alla test    er roch sen Ska du b    ygga och ladda upp e    n ny versionpå detta format på f    ilnamn a    pp-debug-v35-20260204-070127.apk
-  2   2                                           3   3 det ska stå i denna film hur man bygger     och hur
-  4   4   man hittar Java versionen @upload.md
+Here is a clearer and more structured version of your CLAUDE.md, rewritten in English and updated to only build release APKs named latest.apk.
+
+
+---
+
+CLAUDE.md
+
+Build and Release Process
+
+After every change, follow this process:
+
+1. Commit your changes.
+
+
+2. Bump the version number.
+
+
+3. Run all tests and ensure they pass.
+
+
+4. Build a release APK only.
+
+
+5. Upload the generated APK.
+
+
+
+APK Naming Convention
+
+The release build must always be named:
+
+latest.apk
+
+No version number or timestamp should be included in the file name.
+
+Build Instructions
+
+This file @upload.md clearly describes:
+
+How to build the release APK.
+
+How to run all tests.
+
+Where to find the installed Java version.
+
+Any required environment setup.
+
+
+Ensure that these instructions are kept up to date.
