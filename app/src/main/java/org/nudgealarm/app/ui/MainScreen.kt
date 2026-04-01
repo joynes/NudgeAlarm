@@ -135,6 +135,7 @@ fun MainScreen(
     var renameGameName by remember { mutableStateOf("") }
     var showCompleteAllConfirm by remember { mutableStateOf(false) }
     var showAbandonAllConfirm by remember { mutableStateOf(false) }
+    var activeAllButtonShowsAbandon by remember { mutableStateOf(false) }
     var showCompleteRemainingConfirm by remember { mutableStateOf(false) }
     var showSnoozeAllActive by remember { mutableStateOf(false) }
     var showSnoozeAllRemaining by remember { mutableStateOf(false) }
@@ -261,12 +262,23 @@ fun MainScreen(
                                     Text("SNOOZE ALL", style = MaterialTheme.typography.labelSmall, color = MegadriveCyan)
                                 }
                                 OutlinedButton(
-                                    onClick = { showCompleteAllConfirm = true },
+                                    onClick = {
+                                        if (activeAllButtonShowsAbandon) {
+                                            showAbandonAllConfirm = true
+                                            activeAllButtonShowsAbandon = false
+                                        } else {
+                                            showCompleteAllConfirm = true
+                                        }
+                                    },
                                     shape = RoundedCornerShape(4.dp),
-                                    border = BorderStroke(1.dp, MegadriveGreen),
+                                    border = BorderStroke(1.dp, if (activeAllButtonShowsAbandon) MegadriveOrange else MegadriveGreen),
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text("COMPLETE ALL", style = MaterialTheme.typography.labelSmall, color = MegadriveGreen)
+                                    Text(
+                                        if (activeAllButtonShowsAbandon) "ABANDON ALL" else "COMPLETE ALL",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (activeAllButtonShowsAbandon) MegadriveOrange else MegadriveGreen
+                                    )
                                 }
                             }
                         }
@@ -1082,7 +1094,10 @@ fun MainScreen(
     // === COMPLETE ALL CONFIRMATION ===
     if (showCompleteAllConfirm) {
         AlertDialog(
-            onDismissRequest = { showCompleteAllConfirm = false },
+            onDismissRequest = {
+                showCompleteAllConfirm = false
+                activeAllButtonShowsAbandon = true
+            },
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
@@ -1103,6 +1118,7 @@ fun MainScreen(
                     onClick = {
                         uiState.activeReminders.forEach { onMarkDone(it.ruleId) }
                         showCompleteAllConfirm = false
+                        activeAllButtonShowsAbandon = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MegadriveGreen),
                     shape = RoundedCornerShape(4.dp)
@@ -1111,8 +1127,11 @@ fun MainScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCompleteAllConfirm = false }) {
-                    Text("< CANCEL", color = MegadriveCyan)
+                TextButton(onClick = {
+                    showCompleteAllConfirm = false
+                    activeAllButtonShowsAbandon = true
+                }) {
+                    Text("ABANDON ALL? >", color = MegadriveOrange)
                 }
             }
         )
@@ -1160,7 +1179,10 @@ fun MainScreen(
     // === ABANDON ALL CONFIRMATION ===
     if (showAbandonAllConfirm) {
         AlertDialog(
-            onDismissRequest = { showAbandonAllConfirm = false },
+            onDismissRequest = {
+                showAbandonAllConfirm = false
+                activeAllButtonShowsAbandon = false
+            },
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
@@ -1172,15 +1194,16 @@ fun MainScreen(
             },
             text = {
                 Text(
-                    text = "Cancel all ${uiState.todaysSchedule.size} upcoming quests for today?",
+                    text = "Abandon all ${uiState.activeReminders.size} active quests?",
                     color = MaterialTheme.colorScheme.onSurface
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        uiState.todaysSchedule.forEach { onCancel(it.ruleId) }
+                        uiState.activeReminders.forEach { onCancel(it.ruleId) }
                         showAbandonAllConfirm = false
+                        activeAllButtonShowsAbandon = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MegadriveOrange),
                     shape = RoundedCornerShape(4.dp)
@@ -1189,7 +1212,10 @@ fun MainScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAbandonAllConfirm = false }) {
+                TextButton(onClick = {
+                    showAbandonAllConfirm = false
+                    activeAllButtonShowsAbandon = false
+                }) {
                     Text("< CANCEL", color = MegadriveCyan)
                 }
             }
