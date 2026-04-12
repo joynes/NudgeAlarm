@@ -567,27 +567,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun markAllRemindersDone(ruleIds: List<String>) {
         eventLogStore.add(Event.UiAction(action = "Mark all done from UI: ${ruleIds.joinToString()}"))
-        val intent = Intent(getApplication(), ReminderService::class.java).apply {
-            action = ReminderService.ACTION_DONE_ALL_FROM_UI
-            putExtra(ReminderService.EXTRA_RULE_IDS, ruleIds.toTypedArray())
-        }
-        getApplication<Application>().startService(intent)
         viewModelScope.launch {
-            delay(200)
+            // Mark all done directly in DB
+            withContext(Dispatchers.IO) {
+                for (ruleId in ruleIds) {
+                    nagRepository.markDoneByRuleId(ruleId)
+                }
+            }
+            // Clear active reminders immediately for instant UI update
+            ruleIds.forEach { ReminderService.activeReminders.remove(it) }
             updateState()
+            // Tell service to refresh notification
+            val intent = Intent(getApplication(), ReminderService::class.java).apply {
+                action = ReminderService.ACTION_REFRESH_NOTIFICATION
+            }
+            getApplication<Application>().startService(intent)
         }
     }
 
     fun cancelAllReminders(ruleIds: List<String>) {
         eventLogStore.add(Event.UiAction(action = "Cancel all from UI: ${ruleIds.joinToString()}"))
-        val intent = Intent(getApplication(), ReminderService::class.java).apply {
-            action = ReminderService.ACTION_CANCEL_ALL_FROM_UI
-            putExtra(ReminderService.EXTRA_RULE_IDS, ruleIds.toTypedArray())
-        }
-        getApplication<Application>().startService(intent)
         viewModelScope.launch {
-            delay(200)
+            // Cancel all directly in DB
+            withContext(Dispatchers.IO) {
+                for (ruleId in ruleIds) {
+                    nagRepository.markCancelledByRuleId(ruleId)
+                }
+            }
+            // Clear active reminders immediately for instant UI update
+            ruleIds.forEach { ReminderService.activeReminders.remove(it) }
             updateState()
+            // Tell service to refresh notification
+            val intent = Intent(getApplication(), ReminderService::class.java).apply {
+                action = ReminderService.ACTION_REFRESH_NOTIFICATION
+            }
+            getApplication<Application>().startService(intent)
         }
     }
 
