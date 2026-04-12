@@ -120,8 +120,10 @@ fun MainScreen(
     onNavigateToRoutines: () -> Unit,
     onNavigateToEditReminders: () -> Unit,
     onMarkDone: (String) -> Unit,
+    onMarkAllDone: (List<String>) -> Unit,
     onSnooze: (String, Int) -> Unit,
     onCancel: (String) -> Unit,
+    onCancelAll: (List<String>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showPresetDialog by remember { mutableStateOf(false) }
@@ -1116,7 +1118,7 @@ fun MainScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        uiState.activeReminders.forEach { onMarkDone(it.ruleId) }
+                        onMarkAllDone(uiState.activeReminders.map { it.ruleId })
                         showCompleteAllConfirm = false
                         activeAllButtonShowsAbandon = false
                     },
@@ -1159,7 +1161,7 @@ fun MainScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        uiState.todaysSchedule.forEach { onMarkDone(it.ruleId) }
+                        onMarkAllDone(uiState.todaysSchedule.map { it.ruleId })
                         showCompleteRemainingConfirm = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MegadriveGreen),
@@ -1201,7 +1203,7 @@ fun MainScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        uiState.activeReminders.forEach { onCancel(it.ruleId) }
+                        onCancelAll(uiState.activeReminders.map { it.ruleId })
                         showAbandonAllConfirm = false
                         activeAllButtonShowsAbandon = false
                     },

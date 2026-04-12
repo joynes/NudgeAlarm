@@ -53,11 +53,14 @@ class ReminderService : Service() {
         const val ACTION_STOP = "org.nudgealarm.app.ACTION_STOP"
         const val ACTION_RELOAD = "org.nudgealarm.app.ACTION_RELOAD"
         const val ACTION_DONE_FROM_UI = "org.nudgealarm.app.ACTION_DONE_FROM_UI"
+        const val ACTION_DONE_ALL_FROM_UI = "org.nudgealarm.app.ACTION_DONE_ALL_FROM_UI"
         const val ACTION_SNOOZE_FROM_UI = "org.nudgealarm.app.ACTION_SNOOZE_FROM_UI"
         const val ACTION_CANCEL_FROM_UI = "org.nudgealarm.app.ACTION_CANCEL_FROM_UI"
+        const val ACTION_CANCEL_ALL_FROM_UI = "org.nudgealarm.app.ACTION_CANCEL_ALL_FROM_UI"
         const val ACTION_REFRESH_NOTIFICATION = "org.nudgealarm.app.ACTION_REFRESH_NOTIFICATION"
         const val EXTRA_CONFIG_URI = "config_uri"
         const val EXTRA_RULE_ID = "rule_id"
+        const val EXTRA_RULE_IDS = "rule_ids"
         const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
 
         private const val PREFS_NAME = "reminder_service"
@@ -145,6 +148,10 @@ class ReminderService : Service() {
                 val ruleId = intent.getStringExtra(EXTRA_RULE_ID)
                 if (ruleId != null) handleDone(ruleId)
             }
+            ACTION_DONE_ALL_FROM_UI -> {
+                val ruleIds = intent.getStringArrayExtra(EXTRA_RULE_IDS)
+                if (ruleIds != null) handleDoneAll(ruleIds.toList())
+            }
             ACTION_SNOOZE_FROM_UI -> {
                 val ruleId = intent.getStringExtra(EXTRA_RULE_ID)
                 val minutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, 5)
@@ -153,6 +160,10 @@ class ReminderService : Service() {
             ACTION_CANCEL_FROM_UI -> {
                 val ruleId = intent.getStringExtra(EXTRA_RULE_ID)
                 if (ruleId != null) handleCancel(ruleId)
+            }
+            ACTION_CANCEL_ALL_FROM_UI -> {
+                val ruleIds = intent.getStringArrayExtra(EXTRA_RULE_IDS)
+                if (ruleIds != null) handleCancelAll(ruleIds.toList())
             }
             ACTION_REFRESH_NOTIFICATION -> {
                 serviceScope.launch { refreshCombinedNotification(silent = true) }
@@ -471,6 +482,43 @@ class ReminderService : Service() {
             }
 
             refreshCombinedNotification(silent = true) // user cancelled, update silently
+        }
+    }
+
+    private fun handleDoneAll(ruleIds: List<String>) {
+        eventLog.add(Event.UiAction(action = "Mark all done from UI: ${ruleIds.joinToString()}"))
+
+        serviceScope.launch {
+            withContext(NonCancellable) {
+                for (ruleId in ruleIds) {
+                    val nagState = nagRepository.markDoneByRuleId(ruleId)
+                    if (nagState != null) {
+                        analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
+                    }
+                }
+            }
+            refreshCombinedNotification(silent = true)
+        }
+    }
+
+    private fun handleCancelAll(ruleIds: List<String>) {
+        eventLog.add(Event.UiAction(action = "Cancel all from UI: ${ruleIds.joinToString()}"))
+
+        serviceScope.launch {
+            withContext(NonCancellable) {
+                for (ruleId in ruleIds) {
+                    val nagState = nagRepository.markCancelledByRuleId(ruleId)
+                    if (nagState != null) {
+                        analyticsRepository.recordCompletion(nagState, NagStatus.CANCELLED)
+                    } else {
+                        val rule = config?.reminders?.find { it.id == ruleId }
+                        if (rule != null) {
+                            nagRepository.createCancelledEntry(ruleId, rule.title)
+                        }
+                    }
+                }
+            }
+            refreshCombinedNotification(silent = true)
         }
     }
 

@@ -565,6 +565,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun markAllRemindersDone(ruleIds: List<String>) {
+        eventLogStore.add(Event.UiAction(action = "Mark all done from UI: ${ruleIds.joinToString()}"))
+        val intent = Intent(getApplication(), ReminderService::class.java).apply {
+            action = ReminderService.ACTION_DONE_ALL_FROM_UI
+            putExtra(ReminderService.EXTRA_RULE_IDS, ruleIds.toTypedArray())
+        }
+        getApplication<Application>().startService(intent)
+        viewModelScope.launch {
+            delay(200)
+            updateState()
+        }
+    }
+
+    fun cancelAllReminders(ruleIds: List<String>) {
+        eventLogStore.add(Event.UiAction(action = "Cancel all from UI: ${ruleIds.joinToString()}"))
+        val intent = Intent(getApplication(), ReminderService::class.java).apply {
+            action = ReminderService.ACTION_CANCEL_ALL_FROM_UI
+            putExtra(ReminderService.EXTRA_RULE_IDS, ruleIds.toTypedArray())
+        }
+        getApplication<Application>().startService(intent)
+        viewModelScope.launch {
+            delay(200)
+            updateState()
+        }
+    }
+
     fun snoozeReminder(ruleId: String, minutes: Int) {
         eventLogStore.add(Event.UiAction(action = "Snooze from UI: $ruleId for ${minutes}m"))
         val intent = Intent(getApplication(), ReminderService::class.java).apply {

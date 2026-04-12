@@ -397,8 +397,10 @@ fun NudgeAlarmApp() {
                 currentScreen = Screen.EditReminders
             },
             onMarkDone = { ruleId -> viewModel.markReminderDone(ruleId) },
+            onMarkAllDone = { ruleIds -> viewModel.markAllRemindersDone(ruleIds) },
             onSnooze = { ruleId, minutes -> viewModel.snoozeReminder(ruleId, minutes) },
             onCancel = { ruleId -> viewModel.cancelReminder(ruleId) },
+            onCancelAll = { ruleIds -> viewModel.cancelAllReminders(ruleIds) },
             modifier = Modifier.padding(innerPadding)
         )
 
