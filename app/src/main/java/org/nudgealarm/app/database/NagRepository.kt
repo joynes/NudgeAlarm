@@ -87,17 +87,16 @@ class NagRepository(private val dao: NagStateDao) {
     }
 
     /**
-     * Mark a nag as completed by ruleId (finds active occurrence for that rule).
-     * Returns the NagStateEntity if found (for history recording).
+     * Mark all active nags as completed by ruleId.
+     * Returns the list of completed NagStateEntities (for history recording).
      */
     suspend fun markDoneByRuleId(ruleId: String): NagStateEntity? {
         val activeNags = dao.getActiveNags()
-        val nag = activeNags.find { it.ruleId == ruleId }
-        if (nag != null) {
+        val nags = activeNags.filter { it.ruleId == ruleId }
+        for (nag in nags) {
             dao.markCompleted(nag.occurrenceKey)
-            return nag
         }
-        return null
+        return nags.firstOrNull()
     }
 
     /**
@@ -120,12 +119,11 @@ class NagRepository(private val dao: NagStateDao) {
      */
     suspend fun markCancelledByRuleId(ruleId: String): NagStateEntity? {
         val activeNags = dao.getActiveNags()
-        val nag = activeNags.find { it.ruleId == ruleId }
-        if (nag != null) {
+        val nags = activeNags.filter { it.ruleId == ruleId }
+        for (nag in nags) {
             dao.markCancelled(nag.occurrenceKey)
-            return nag
         }
-        return null
+        return nags.firstOrNull()
     }
 
     /**
