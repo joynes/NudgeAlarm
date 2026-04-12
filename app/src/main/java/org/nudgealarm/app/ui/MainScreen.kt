@@ -553,8 +553,15 @@ fun MainScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = onMenuDismiss) {
-                    Text("< BACK", color = MegadriveCyan)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "v$APP_VERSION",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    TextButton(onClick = onMenuDismiss) {
+                        Text("< BACK", color = MegadriveCyan)
+                    }
                 }
             }
         )
