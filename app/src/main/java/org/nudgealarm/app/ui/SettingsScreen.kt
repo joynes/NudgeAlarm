@@ -59,6 +59,7 @@ fun SettingsScreen(
     onPreviewSound: (Uri?) -> Unit,
     onStopPreview: () -> Unit,
     onNavigateToPermissions: () -> Unit,
+    onSetStaleTaskThresholdDays: (Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -255,6 +256,65 @@ fun SettingsScreen(
                             checkedThumbColor = MegadriveGreen,
                             checkedTrackColor = MegadriveGreen.copy(alpha = 0.5f)
                         )
+                    )
+                }
+            }
+
+            // === STALE TASK CLEANUP ===
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, MegadriveOrange, RoundedCornerShape(4.dp)),
+                shape = RoundedCornerShape(4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = ">> DAY RESET",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MegadriveOrange
+                    )
+                    Text(
+                        text = "Auto-clear active quests from yesterday if they repeat every X days or less",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(1, 2, 3, 7, 14).forEach { days ->
+                            val isSelected = uiState.staleTaskThresholdDays == days
+                            OutlinedButton(
+                                onClick = { onSetStaleTaskThresholdDays(days) },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isSelected) MegadriveOrange else Color.Transparent,
+                                    contentColor = if (isSelected) Color.Black else MegadriveOrange
+                                ),
+                                border = BorderStroke(1.dp, MegadriveOrange),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = if (days == 1) "1d" else "${days}d",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = when (uiState.staleTaskThresholdDays) {
+                            1 -> "Daily and sub-daily quests reset at midnight"
+                            else -> "Quests repeating every ${uiState.staleTaskThresholdDays} days or less reset at midnight"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MegadriveOrange.copy(alpha = 0.7f)
                     )
                 }
             }

@@ -106,6 +106,7 @@ class SettingsStore(context: Context) {
         private const val KEY_CUSTOM_SOUND_NAME = "custom_sound_name"
         private const val KEY_CHANNEL_VERSION = "channel_version"
         private const val KEY_QUIET_MODE = "quiet_mode"
+        private const val KEY_STALE_TASK_THRESHOLD_DAYS = "stale_task_threshold_days"
     }
 
     /**
@@ -143,6 +144,15 @@ class SettingsStore(context: Context) {
     var quietMode: Boolean
         get() = prefs.getBoolean(KEY_QUIET_MODE, false)
         set(value) = prefs.edit().putBoolean(KEY_QUIET_MODE, value).apply()
+
+    /**
+     * Tasks that are still ACTIVE from a previous day are auto-expired when the
+     * rule's recurrence interval is <= this many days.
+     * Default 1 = clear daily (and sub-daily) tasks at day boundary; keep every-2+-day tasks.
+     */
+    var staleTaskThresholdDays: Int
+        get() = prefs.getInt(KEY_STALE_TASK_THRESHOLD_DAYS, 1)
+        set(value) = prefs.edit().putInt(KEY_STALE_TASK_THRESHOLD_DAYS, value).apply()
 
     /**
      * Get the effective sound URI to use for notifications.

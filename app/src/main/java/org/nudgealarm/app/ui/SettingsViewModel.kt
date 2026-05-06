@@ -22,7 +22,8 @@ data class SettingsUiState(
     val customSoundName: String? = null,
     val vibrationEnabled: Boolean = true,
     val deviceRingtones: List<DeviceRingtone> = emptyList(),
-    val currentlyPlayingUri: Uri? = null  // Track which sound is playing
+    val currentlyPlayingUri: Uri? = null,  // Track which sound is playing
+    val staleTaskThresholdDays: Int = 1
 )
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -43,8 +44,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             alarmSound = settingsStore.alarmSound,
             vibrationEnabled = settingsStore.vibrationEnabled,
             customSoundUri = settingsStore.customSoundUri,
-            customSoundName = settingsStore.customSoundName
+            customSoundName = settingsStore.customSoundName,
+            staleTaskThresholdDays = settingsStore.staleTaskThresholdDays
         )
+    }
+
+    fun setStaleTaskThresholdDays(days: Int) {
+        settingsStore.staleTaskThresholdDays = days
+        _uiState.value = _uiState.value.copy(staleTaskThresholdDays = days)
     }
 
     private fun loadDeviceRingtones() {

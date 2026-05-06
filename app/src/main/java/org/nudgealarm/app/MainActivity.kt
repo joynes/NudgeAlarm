@@ -480,6 +480,7 @@ fun NudgeAlarmApp() {
                     eventLog.add(Event.NavigatedTo(screen = "Permissions (from Settings)"))
                     currentScreen = Screen.Permissions
                 },
+                onSetStaleTaskThresholdDays = { days -> settingsViewModel.setStaleTaskThresholdDays(days) },
                 onBack = {
                     settingsViewModel.stopPreview()
                     eventLog.add(Event.NavigatedTo(screen = "Main (from Settings)"))

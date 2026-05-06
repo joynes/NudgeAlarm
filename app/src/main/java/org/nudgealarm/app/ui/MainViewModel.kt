@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.nudgealarm.app.core.config.AppConfig
 import org.nudgealarm.app.core.config.ReminderConfig
+import org.nudgealarm.app.core.config.approximateIntervalDays
 import org.nudgealarm.app.core.cron.CronExpression
 import org.nudgealarm.app.core.event.Event
 import org.nudgealarm.app.database.NagDatabase
@@ -27,6 +28,7 @@ import org.nudgealarm.app.storage.DataExportStore
 import org.nudgealarm.app.storage.EventLogStore
 import org.nudgealarm.app.storage.SavedGame
 import org.nudgealarm.app.storage.SavedGamesStore
+import org.nudgealarm.app.storage.SettingsStore
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import java.io.File
@@ -73,6 +75,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val savedGamesStore = SavedGamesStore(application)
     private val appStateStore = AppStateStore(application)
     private val dataExportStore = DataExportStore(application)
+    private val settingsStore = SettingsStore(application)
     private val reminderRepository: ReminderRepository
     private val nagRepository: NagRepository
 
@@ -138,7 +141,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Auto-expires ACTIVE nags that started on a previous day when the rule's
+     * recurrence interval is within the stale threshold setting.
+     */
+    private suspend fun cleanupStaleActiveReminders() {
+        val startOfDay = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val thresholdDays = settingsStore.staleTaskThresholdDays
+
+        val staleRuleIds = ReminderService.activeReminders.values
+            .filter { it.triggeredAt < startOfDay }
+            .filter { active ->
+                val rule = ReminderService.currentConfig?.reminders?.find { it.id == active.ruleId }
+                rule != null && rule.approximateIntervalDays() <= thresholdDays
+            }
+            .map { it.ruleId }
+
+        if (staleRuleIds.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                for (ruleId in staleRuleIds) {
+                    val key = nagRepository.getActiveOccurrenceKeyForRule(ruleId)
+                    if (key != null) nagRepository.markExpired(key)
+                }
+            }
+            staleRuleIds.forEach { ReminderService.activeReminders.remove(it) }
+            eventLogStore.add(Event.Debug(detail = "Auto-expired ${staleRuleIds.size} stale reminder(s) from previous day"))
+        }
+    }
+
     private suspend fun updateState() {
+        cleanupStaleActiveReminders()
+
         val events = withContext(Dispatchers.IO) {
             eventLogStore.getAll()
         }
