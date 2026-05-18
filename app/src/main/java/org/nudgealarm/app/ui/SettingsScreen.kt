@@ -60,6 +60,7 @@ fun SettingsScreen(
     onStopPreview: () -> Unit,
     onNavigateToPermissions: () -> Unit,
     onSetStaleTaskThresholdDays: (Int) -> Unit,
+    onToggleAlertOnlyWhenActive: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -315,6 +316,45 @@ fun SettingsScreen(
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MegadriveOrange.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            // === ACTIVE ONLY - Screen detection ===
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, MegadriveCyan, RoundedCornerShape(4.dp)),
+                shape = RoundedCornerShape(4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = ">> ACTIVE ONLY",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MegadriveCyan
+                        )
+                        Text(
+                            text = "Only alert (sound/vibration) when screen is on",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = uiState.alertOnlyWhenActive,
+                        onCheckedChange = onToggleAlertOnlyWhenActive,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MegadriveCyan,
+                            checkedTrackColor = MegadriveCyan.copy(alpha = 0.5f)
+                        )
                     )
                 }
             }

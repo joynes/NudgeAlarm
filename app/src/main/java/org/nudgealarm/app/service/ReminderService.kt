@@ -92,6 +92,7 @@ class ReminderService : Service() {
     private lateinit var nagRepository: NagRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var reminderRepository: ReminderRepository
+    private lateinit var settingsStore: org.nudgealarm.app.storage.SettingsStore
 
     private var config: AppConfig? = null
 
@@ -101,6 +102,7 @@ class ReminderService : Service() {
         configLoader = ConfigLoader(this)
         powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        settingsStore = org.nudgealarm.app.storage.SettingsStore(this)
 
         // Initialize database and repositories
         val database = NagDatabase.getInstance(this)
@@ -555,6 +557,8 @@ class ReminderService : Service() {
     }
 
     private suspend fun refreshCombinedNotification(silent: Boolean = false) {
+        // Suppress alert sound/vibration when screen is off and "active only" is enabled
+        val effectiveSilent = silent || (settingsStore.alertOnlyWhenActive && !powerManager.isInteractive)
         val allNags = nagRepository.getActiveNags()
         val now = System.currentTimeMillis()
 
@@ -581,7 +585,7 @@ class ReminderService : Service() {
         if (activeNags.isEmpty()) {
             notificationManager.cancel(ReminderNotification.COMBINED_NOTIFICATION_ID)
         } else {
-            val notification = ReminderNotification.buildCombinedNotification(this, activeNags, onlyAlertOnce = silent)
+            val notification = ReminderNotification.buildCombinedNotification(this, activeNags, onlyAlertOnce = effectiveSilent)
             notificationManager.notify(ReminderNotification.COMBINED_NOTIFICATION_ID, notification)
         }
 

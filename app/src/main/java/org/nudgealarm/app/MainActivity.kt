@@ -481,6 +481,7 @@ fun NudgeAlarmApp() {
                     currentScreen = Screen.Permissions
                 },
                 onSetStaleTaskThresholdDays = { days -> settingsViewModel.setStaleTaskThresholdDays(days) },
+                onToggleAlertOnlyWhenActive = { enabled -> settingsViewModel.setAlertOnlyWhenActive(enabled) },
                 onBack = {
                     settingsViewModel.stopPreview()
                     eventLog.add(Event.NavigatedTo(screen = "Main (from Settings)"))

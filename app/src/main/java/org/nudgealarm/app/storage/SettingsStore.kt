@@ -107,6 +107,7 @@ class SettingsStore(context: Context) {
         private const val KEY_CHANNEL_VERSION = "channel_version"
         private const val KEY_QUIET_MODE = "quiet_mode"
         private const val KEY_STALE_TASK_THRESHOLD_DAYS = "stale_task_threshold_days"
+        private const val KEY_ALERT_ONLY_WHEN_ACTIVE = "alert_only_when_active"
     }
 
     /**
@@ -153,6 +154,11 @@ class SettingsStore(context: Context) {
     var staleTaskThresholdDays: Int
         get() = prefs.getInt(KEY_STALE_TASK_THRESHOLD_DAYS, 1)
         set(value) = prefs.edit().putInt(KEY_STALE_TASK_THRESHOLD_DAYS, value).apply()
+
+    /** When true, alerts (sound/vibration) are suppressed when the screen is off. */
+    var alertOnlyWhenActive: Boolean
+        get() = prefs.getBoolean(KEY_ALERT_ONLY_WHEN_ACTIVE, false)
+        set(value) = prefs.edit().putBoolean(KEY_ALERT_ONLY_WHEN_ACTIVE, value).apply()
 
     /**
      * Get the effective sound URI to use for notifications.
