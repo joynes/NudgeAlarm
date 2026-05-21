@@ -482,6 +482,7 @@ fun NudgeAlarmApp() {
                 },
                 onSetStaleTaskThresholdDays = { days -> settingsViewModel.setStaleTaskThresholdDays(days) },
                 onToggleAlertOnlyWhenActive = { enabled -> settingsViewModel.setAlertOnlyWhenActive(enabled) },
+                onSetMinAlertIntervalMinutes = { minutes -> settingsViewModel.setMinAlertIntervalMinutes(minutes) },
                 onBack = {
                     settingsViewModel.stopPreview()
                     eventLog.add(Event.NavigatedTo(screen = "Main (from Settings)"))

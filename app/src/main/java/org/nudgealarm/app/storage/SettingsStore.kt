@@ -108,6 +108,7 @@ class SettingsStore(context: Context) {
         private const val KEY_QUIET_MODE = "quiet_mode"
         private const val KEY_STALE_TASK_THRESHOLD_DAYS = "stale_task_threshold_days"
         private const val KEY_ALERT_ONLY_WHEN_ACTIVE = "alert_only_when_active"
+        private const val KEY_MIN_ALERT_INTERVAL_MINUTES = "min_alert_interval_minutes"
     }
 
     /**
@@ -159,6 +160,14 @@ class SettingsStore(context: Context) {
     var alertOnlyWhenActive: Boolean
         get() = prefs.getBoolean(KEY_ALERT_ONLY_WHEN_ACTIVE, false)
         set(value) = prefs.edit().putBoolean(KEY_ALERT_ONLY_WHEN_ACTIVE, value).apply()
+
+    /**
+     * Minimum minutes between alert sounds/vibrations. 0 = no limit (alert every poll cycle).
+     * E.g. 60 = at most once per hour regardless of nag interval.
+     */
+    var minAlertIntervalMinutes: Int
+        get() = prefs.getInt(KEY_MIN_ALERT_INTERVAL_MINUTES, 0)
+        set(value) = prefs.edit().putInt(KEY_MIN_ALERT_INTERVAL_MINUTES, value).apply()
 
     /**
      * Get the effective sound URI to use for notifications.

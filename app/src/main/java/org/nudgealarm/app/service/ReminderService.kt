@@ -80,6 +80,9 @@ class ReminderService : Service() {
 
         // Active reminders exposed to UI (updated from database)
         val activeReminders = mutableMapOf<String, ActiveReminder>()
+
+        // Tracks when the last audible alert was sent (for min-interval rate limiting)
+        var lastAlertTimeMs: Long = 0L
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -557,10 +560,20 @@ class ReminderService : Service() {
     }
 
     private suspend fun refreshCombinedNotification(silent: Boolean = false) {
-        // Suppress alert sound/vibration when screen is off and "active only" is enabled
-        val effectiveSilent = silent || (settingsStore.alertOnlyWhenActive && !powerManager.isInteractive)
-        val allNags = nagRepository.getActiveNags()
         val now = System.currentTimeMillis()
+
+        // Suppress when screen is off and "active only" is enabled
+        val screenSilent = settingsStore.alertOnlyWhenActive && !powerManager.isInteractive
+
+        // Suppress when within the minimum alert interval
+        val minIntervalMs = settingsStore.minAlertIntervalMinutes * 60_000L
+        val rateLimited = !silent && minIntervalMs > 0 && (now - lastAlertTimeMs) < minIntervalMs
+
+        val effectiveSilent = silent || screenSilent || rateLimited
+
+        // Track last audible alert time
+        if (!effectiveSilent) lastAlertTimeMs = now
+        val allNags = nagRepository.getActiveNags()
 
         // Clear expired snoozes
         for (nag in allNags) {

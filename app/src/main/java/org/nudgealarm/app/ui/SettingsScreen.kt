@@ -61,6 +61,7 @@ fun SettingsScreen(
     onNavigateToPermissions: () -> Unit,
     onSetStaleTaskThresholdDays: (Int) -> Unit,
     onToggleAlertOnlyWhenActive: (Boolean) -> Unit,
+    onSetMinAlertIntervalMinutes: (Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -355,6 +356,69 @@ fun SettingsScreen(
                             checkedThumbColor = MegadriveCyan,
                             checkedTrackColor = MegadriveCyan.copy(alpha = 0.5f)
                         )
+                    )
+                }
+            }
+
+            // === MIN ALERT INTERVAL ===
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, MegadriveGold, RoundedCornerShape(4.dp)),
+                shape = RoundedCornerShape(4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = ">> ALARM COOLDOWN",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MegadriveGold
+                    )
+                    Text(
+                        text = "Minimum time between alert sounds",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(0 to "Off", 15 to "15m", 30 to "30m", 60 to "1h", 120 to "2h").forEach { (minutes, label) ->
+                            val isSelected = uiState.minAlertIntervalMinutes == minutes
+                            OutlinedButton(
+                                onClick = { onSetMinAlertIntervalMinutes(minutes) },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isSelected) MegadriveGold else Color.Transparent,
+                                    contentColor = if (isSelected) Color.Black else MegadriveGold
+                                ),
+                                border = BorderStroke(1.dp, MegadriveGold),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = when (uiState.minAlertIntervalMinutes) {
+                            0 -> "Alert plays every nag cycle"
+                            else -> "Alert plays at most once every ${
+                                if (uiState.minAlertIntervalMinutes >= 60)
+                                    "${uiState.minAlertIntervalMinutes / 60}h"
+                                else "${uiState.minAlertIntervalMinutes}min"
+                            }"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MegadriveGold.copy(alpha = 0.7f)
                     )
                 }
             }

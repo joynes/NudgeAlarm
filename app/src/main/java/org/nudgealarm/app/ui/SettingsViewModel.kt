@@ -24,7 +24,8 @@ data class SettingsUiState(
     val deviceRingtones: List<DeviceRingtone> = emptyList(),
     val currentlyPlayingUri: Uri? = null,  // Track which sound is playing
     val staleTaskThresholdDays: Int = 1,
-    val alertOnlyWhenActive: Boolean = false
+    val alertOnlyWhenActive: Boolean = false,
+    val minAlertIntervalMinutes: Int = 0
 )
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,7 +48,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             customSoundUri = settingsStore.customSoundUri,
             customSoundName = settingsStore.customSoundName,
             staleTaskThresholdDays = settingsStore.staleTaskThresholdDays,
-            alertOnlyWhenActive = settingsStore.alertOnlyWhenActive
+            alertOnlyWhenActive = settingsStore.alertOnlyWhenActive,
+            minAlertIntervalMinutes = settingsStore.minAlertIntervalMinutes
         )
     }
 
@@ -59,6 +61,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setAlertOnlyWhenActive(enabled: Boolean) {
         settingsStore.alertOnlyWhenActive = enabled
         _uiState.value = _uiState.value.copy(alertOnlyWhenActive = enabled)
+    }
+
+    fun setMinAlertIntervalMinutes(minutes: Int) {
+        settingsStore.minAlertIntervalMinutes = minutes
+        _uiState.value = _uiState.value.copy(minAlertIntervalMinutes = minutes)
     }
 
     private fun loadDeviceRingtones() {
