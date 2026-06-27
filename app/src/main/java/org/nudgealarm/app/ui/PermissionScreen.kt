@@ -205,12 +205,10 @@ private fun getPermissionStates(
         ),
         PermissionState(
             name = "Battery Saver",
-            description = "Disable to prevent game from sleeping",
+            description = "Open Android battery settings if reminders are delayed",
             isGranted = powerManager.isIgnoringBatteryOptimizations(context.packageName),
             onRequest = {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                }
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                 context.startActivity(intent)
             }
         ),

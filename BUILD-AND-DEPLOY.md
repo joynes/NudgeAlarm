@@ -1,15 +1,16 @@
 # NudgeAlarm2 Build and Deploy Guide
 
-## Quick Deploy (TL;DR)
+## Quick Release (TL;DR)
 
 ```bash
 cd <repo>
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleDebug
+./gradlew test
+./gradlew assembleRelease
 ./upload-apk.sh
 ```
 
-Then open Google Drive on your phone and tap `latest.apk` to install.
+The uploaded release APK is always named `latest.apk`.
 
 ---
 
@@ -39,21 +40,22 @@ Configuration is stored in `~/.config/rclone/rclone.conf`
 
 ---
 
-## Build Process
+## Test Process
 
-### Build Debug APK
 ```bash
 cd <repo>
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleDebug
+./gradlew test
 ```
 
-**Output:** `app/build/outputs/apk/debug/app-debug.apk`
+## Build Process
 
-### Build Release APK (signed)
+### Build Release APK
 ```bash
 ./gradlew assembleRelease
 ```
+
+**Output:** `app/build/outputs/apk/release/app-release.apk`
 
 ---
 
@@ -64,13 +66,12 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./upload-apk.sh
 ```
 
-This uploads two copies:
-- `gdrive:apks/latest.apk` - Always the most recent build (overwrites)
-- `gdrive:apks/app-debug-YYYYMMDD-HHMMSS.apk` - Timestamped backup
+This uploads one copy:
+- `gdrive:apks/latest.apk` - Always the most recent signed release build (overwrites)
 
 ### Manual upload
 ```bash
-rclone copyto app/build/outputs/apk/debug/app-debug.apk gdrive:apks/latest.apk
+rclone copyto app/build/outputs/apk/release/app-release.apk gdrive:apks/latest.apk
 ```
 
 ---
@@ -102,7 +103,7 @@ rclone config reconnect gdrive:
 ### Build fails with dependency errors
 Clean and rebuild:
 ```bash
-./gradlew clean assembleDebug
+./gradlew clean test assembleRelease
 ```
 
 ---
@@ -129,7 +130,7 @@ ssh user@mac-hostname
 # Build and upload
 cd <repo>
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleDebug && ./upload-apk.sh
+./gradlew test && ./gradlew assembleRelease && ./upload-apk.sh
 ```
 
 Then install from Google Drive on the phone.

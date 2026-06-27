@@ -6,22 +6,25 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 
-enum class AlarmSound(val displayName: String, val uri: Uri?, val category: String) {
+enum class AlarmSound(val displayName: String, private val uriString: String?, val category: String) {
     // Alarm sounds
-    DEFAULT_ALARM("Default Alarm", android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI, "Alarms"),
-    ALARM_CLOCK("Alarm Clock", Uri.parse("content://settings/system/alarm_alert"), "Alarms"),
+    DEFAULT_ALARM("Default Alarm", "content://settings/system/alarm_alert", "Alarms"),
+    ALARM_CLOCK("Alarm Clock", "content://settings/system/alarm_alert", "Alarms"),
 
     // Notification sounds
-    DEFAULT_NOTIFICATION("Default Notification", android.provider.Settings.System.DEFAULT_NOTIFICATION_URI, "Notifications"),
+    DEFAULT_NOTIFICATION("Default Notification", "content://settings/system/notification_sound", "Notifications"),
 
     // Ringtone sounds
-    DEFAULT_RINGTONE("Default Ringtone", android.provider.Settings.System.DEFAULT_RINGTONE_URI, "Ringtones"),
+    DEFAULT_RINGTONE("Default Ringtone", "content://settings/system/ringtone", "Ringtones"),
 
     // System UI sounds (these are commonly available)
-    BEEP("Beep", Uri.parse("content://settings/system/notification_sound"), "Effects"),
+    BEEP("Beep", "content://settings/system/notification_sound", "Effects"),
 
     // Silent
     SILENT("Silent", null, "Other");
+
+    val uri: Uri?
+        get() = uriString?.let { Uri.parse(it) }
 
     companion object {
         fun fromName(name: String): AlarmSound {
