@@ -21,8 +21,8 @@ android {
         applicationId = "org.nudgealarm.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 125
-        versionName = "1.125"
+        versionCode = 126
+        versionName = "1.126"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
