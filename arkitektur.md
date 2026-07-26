@@ -14,7 +14,7 @@ Metadata om alla sparade spel. Ingen quest-data, bara:
 Hanteras av `SavedGamesStore.kt`.
 
 ### 2. YAML-filer i `filesDir`
-`/data/data/org.nudgealarm.app/files/`
+`/data/data/se.joynes.nudgealarm/files/`
 
 Varje spel sparas som en YAML-fil med alla quest-konfigurationer:
 - `game_{id}.yaml` — sparade spel

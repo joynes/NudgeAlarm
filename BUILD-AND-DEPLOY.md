@@ -112,7 +112,7 @@ Clean and rebuild:
 
 | Property | Value |
 |----------|-------|
-| Application ID | `org.nudgealarm.app` |
+| Application ID | `se.joynes.nudgealarm` |
 | Min SDK | 31 (Android 12) |
 | Target SDK | 36 |
 | Build Tools | Gradle 9.1.0 |

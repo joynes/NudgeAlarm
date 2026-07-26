@@ -12,17 +12,17 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "org.nudgealarm.app"
+    namespace = "se.joynes.nudgealarm"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "org.nudgealarm.app"
+        applicationId = "se.joynes.nudgealarm"
         minSdk = 31
         targetSdk = 36
-        versionCode = 126
-        versionName = "1.126"
+        versionCode = 127
+        versionName = "1.127"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

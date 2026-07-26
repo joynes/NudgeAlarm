@@ -27,7 +27,7 @@
 -keep class org.yaml.snakeyaml.** { *; }
 
 # Keep Room entity and DAO classes
--keep class org.nudgealarm.app.database.** { *; }
+-keep class se.joynes.nudgealarm.database.** { *; }
 
 # Keep Gson serialization
 # Generic signatures required for TypeToken (Gson 2.10+ + R8)

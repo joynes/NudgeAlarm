@@ -57,7 +57,7 @@ NudgeAlarm2 is a YAML-configured reminder application for Android that uses a fo
 ## Package Structure
 
 ```
-org.nudgealarm.app/
+se.joynes.nudgealarm/
 ├── core/                    # Pure Kotlin (no Android dependencies)
 │   ├── config/
 │   │   ├── AppConfig.kt         # Root config data class
