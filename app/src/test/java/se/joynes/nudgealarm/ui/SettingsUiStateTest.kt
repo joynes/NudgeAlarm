@@ -12,6 +12,7 @@ class SettingsUiStateTest {
 
         assertEquals(AlarmSound.DEFAULT_ALARM, state.alarmSound)
         assertTrue(state.vibrationEnabled)
+        assertEquals(24 * 60, state.oldReminderRetentionMinutes)
     }
 
     @Test

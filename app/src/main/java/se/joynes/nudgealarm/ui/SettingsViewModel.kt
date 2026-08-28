@@ -23,7 +23,7 @@ data class SettingsUiState(
     val vibrationEnabled: Boolean = true,
     val deviceRingtones: List<DeviceRingtone> = emptyList(),
     val currentlyPlayingUri: Uri? = null,  // Track which sound is playing
-    val staleTaskThresholdDays: Int = 1,
+    val oldReminderRetentionMinutes: Int = 24 * 60,
     val alertOnlyWhenActive: Boolean = false,
     val minAlertIntervalMinutes: Int = 0
 )
@@ -47,15 +47,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             vibrationEnabled = settingsStore.vibrationEnabled,
             customSoundUri = settingsStore.customSoundUri,
             customSoundName = settingsStore.customSoundName,
-            staleTaskThresholdDays = settingsStore.staleTaskThresholdDays,
+            oldReminderRetentionMinutes = settingsStore.oldReminderRetentionMinutes,
             alertOnlyWhenActive = settingsStore.alertOnlyWhenActive,
             minAlertIntervalMinutes = settingsStore.minAlertIntervalMinutes
         )
     }
 
-    fun setStaleTaskThresholdDays(days: Int) {
-        settingsStore.staleTaskThresholdDays = days
-        _uiState.value = _uiState.value.copy(staleTaskThresholdDays = days)
+    fun setOldReminderRetentionMinutes(minutes: Int) {
+        settingsStore.oldReminderRetentionMinutes = minutes
+        _uiState.value = _uiState.value.copy(oldReminderRetentionMinutes = minutes)
     }
 
     fun setAlertOnlyWhenActive(enabled: Boolean) {

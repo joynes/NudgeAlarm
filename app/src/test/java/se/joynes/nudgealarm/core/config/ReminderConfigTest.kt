@@ -40,6 +40,7 @@ class ReminderConfigTest {
         )
 
         assertEquals(100, config.maxNags)
+        assertFalse(config.sticky)
     }
 
     @Test
@@ -85,6 +86,7 @@ class ReminderConfigTest {
             schedule = "30 9 * * 1-5",
             nagInterval = 10.minutes,
             maxNags = 50,
+            sticky = true,
             sound = "ringtone",
             vibration = "gentle",
             snoozeOptions = listOf(10.minutes, 30.minutes, 1.hours)
@@ -95,6 +97,7 @@ class ReminderConfigTest {
         assertEquals("30 9 * * 1-5", config.schedule)
         assertEquals(10.minutes, config.nagInterval)
         assertEquals(50, config.maxNags)
+        assertTrue(config.sticky)
         assertEquals("ringtone", config.sound)
         assertEquals("gentle", config.vibration)
         assertEquals(3, config.snoozeOptions.size)

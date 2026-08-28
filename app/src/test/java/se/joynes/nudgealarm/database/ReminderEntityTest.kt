@@ -16,6 +16,7 @@ class ReminderEntityTest {
             schedule = "0 8 * * *",
             nagIntervalMinutes = 10,
             maxNags = 50,
+            sticky = true,
             enabled = true,
             createdAt = now,
             updatedAt = now
@@ -26,6 +27,7 @@ class ReminderEntityTest {
         assertEquals("0 8 * * *", entity.schedule)
         assertEquals(10, entity.nagIntervalMinutes)
         assertEquals(50, entity.maxNags)
+        assertTrue(entity.sticky)
         assertTrue(entity.enabled)
         assertEquals(now, entity.createdAt)
         assertEquals(now, entity.updatedAt)
@@ -41,6 +43,7 @@ class ReminderEntityTest {
 
         assertEquals(5, entity.nagIntervalMinutes)
         assertEquals(100, entity.maxNags)
+        assertFalse(entity.sticky)
         assertTrue(entity.enabled)
     }
 
@@ -51,7 +54,8 @@ class ReminderEntityTest {
             title = "Convert Test",
             schedule = "0 9 * * 1-5",
             nagIntervalMinutes = 15,
-            maxNags = 20
+            maxNags = 20,
+            sticky = true
         )
 
         val config = entity.toReminderConfig()
@@ -61,6 +65,7 @@ class ReminderEntityTest {
         assertEquals("0 9 * * 1-5", config.schedule)
         assertEquals(15.minutes, config.nagInterval)
         assertEquals(20, config.maxNags)
+        assertTrue(config.sticky)
     }
 
     @Test
@@ -70,7 +75,8 @@ class ReminderEntityTest {
             title = "From Config",
             schedule = "0 12 * * *",
             nagInterval = 20.minutes,
-            maxNags = 75
+            maxNags = 75,
+            sticky = true
         )
 
         val entity = ReminderEntity.fromReminderConfig(config)
@@ -80,6 +86,7 @@ class ReminderEntityTest {
         assertEquals("0 12 * * *", entity.schedule)
         assertEquals(20, entity.nagIntervalMinutes)
         assertEquals(75, entity.maxNags)
+        assertTrue(entity.sticky)
     }
 
     @Test

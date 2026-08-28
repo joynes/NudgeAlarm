@@ -61,7 +61,8 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
         title: String,
         schedule: String,
         nagIntervalMinutes: Int,
-        maxNags: Int
+        maxNags: Int,
+        sticky: Boolean
     ) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -73,6 +74,7 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
                         schedule = schedule,
                         nagIntervalMinutes = nagIntervalMinutes,
                         maxNags = maxNags,
+                        sticky = sticky,
                         updatedAt = System.currentTimeMillis()
                     )
                     reminderRepository.update(updated)
@@ -82,7 +84,8 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
                         title = title,
                         schedule = schedule,
                         nagIntervalMinutes = nagIntervalMinutes,
-                        maxNags = maxNags
+                        maxNags = maxNags,
+                        sticky = sticky
                     )
                 }
             }

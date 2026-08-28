@@ -30,6 +30,7 @@ object ConfigParser {
         val nagInterval = (data["nag_interval"] as? String)?.let { parseDuration(it) }
             ?: 5.minutes
         val maxNags = (data["max_nags"] as? Number)?.toInt() ?: 100
+        val sticky = data["sticky"] as? Boolean ?: false
         val sound = data["sound"] as? String ?: "alarm"
         val vibration = data["vibration"] as? String ?: "strong"
 
@@ -44,6 +45,7 @@ object ConfigParser {
             schedule = schedule,
             nagInterval = nagInterval,
             maxNags = maxNags,
+            sticky = sticky,
             sound = sound,
             vibration = vibration,
             snoozeOptions = snoozeOptions

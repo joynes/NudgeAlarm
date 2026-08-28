@@ -110,6 +110,7 @@ class SettingsStore(context: Context) {
         private const val KEY_CHANNEL_VERSION = "channel_version"
         private const val KEY_QUIET_MODE = "quiet_mode"
         private const val KEY_STALE_TASK_THRESHOLD_DAYS = "stale_task_threshold_days"
+        private const val KEY_OLD_REMINDER_RETENTION_MINUTES = "old_reminder_retention_minutes"
         private const val KEY_ALERT_ONLY_WHEN_ACTIVE = "alert_only_when_active"
         private const val KEY_MIN_ALERT_INTERVAL_MINUTES = "min_alert_interval_minutes"
     }
@@ -158,6 +159,16 @@ class SettingsStore(context: Context) {
     var staleTaskThresholdDays: Int
         get() = prefs.getInt(KEY_STALE_TASK_THRESHOLD_DAYS, 1)
         set(value) = prefs.edit().putInt(KEY_STALE_TASK_THRESHOLD_DAYS, value).apply()
+
+    /** How long a non-sticky active reminder remains before it is auto-expired. */
+    var oldReminderRetentionMinutes: Int
+        get() = if (prefs.contains(KEY_OLD_REMINDER_RETENTION_MINUTES)) {
+            prefs.getInt(KEY_OLD_REMINDER_RETENTION_MINUTES, 24 * 60)
+        } else {
+            // Preserve the closest equivalent of the previous day-based setting.
+            staleTaskThresholdDays.coerceAtLeast(1) * 24 * 60
+        }
+        set(value) = prefs.edit().putInt(KEY_OLD_REMINDER_RETENTION_MINUTES, value).apply()
 
     /** When true, alerts (sound/vibration) are suppressed when the screen is off. */
     var alertOnlyWhenActive: Boolean

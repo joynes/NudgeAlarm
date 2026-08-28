@@ -10,6 +10,7 @@ data class ReminderConfig(
     val schedule: String,
     val nagInterval: Duration = 5.minutes,
     val maxNags: Int = 100,
+    val sticky: Boolean = false,
     val sound: String = "alarm",
     val vibration: String = "strong",
     val snoozeOptions: List<Duration> = listOf(5.minutes, 15.minutes)

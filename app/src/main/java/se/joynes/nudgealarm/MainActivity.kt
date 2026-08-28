@@ -480,7 +480,7 @@ fun NudgeAlarmApp() {
                     eventLog.add(Event.NavigatedTo(screen = "Permissions (from Settings)"))
                     currentScreen = Screen.Permissions
                 },
-                onSetStaleTaskThresholdDays = { days -> settingsViewModel.setStaleTaskThresholdDays(days) },
+                onSetOldReminderRetentionMinutes = { minutes -> settingsViewModel.setOldReminderRetentionMinutes(minutes) },
                 onToggleAlertOnlyWhenActive = { enabled -> settingsViewModel.setAlertOnlyWhenActive(enabled) },
                 onSetMinAlertIntervalMinutes = { minutes -> settingsViewModel.setMinAlertIntervalMinutes(minutes) },
                 onBack = {
@@ -507,8 +507,8 @@ fun NudgeAlarmApp() {
                 onEdit = { reminder -> editRemindersViewModel.startEdit(reminder) },
                 onDelete = { id -> editRemindersViewModel.deleteReminder(id) },
                 onToggleEnabled = { id -> editRemindersViewModel.toggleEnabled(id) },
-                onSave = { title, schedule, nagInterval, maxNags ->
-                    editRemindersViewModel.saveReminder(title, schedule, nagInterval, maxNags)
+                onSave = { title, schedule, nagInterval, maxNags, sticky ->
+                    editRemindersViewModel.saveReminder(title, schedule, nagInterval, maxNags, sticky)
                 },
                 onCancelEdit = { editRemindersViewModel.cancelEdit() },
                 onBack = {

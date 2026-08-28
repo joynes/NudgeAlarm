@@ -351,9 +351,11 @@ class ReminderService : Service() {
                     eventLog.add(Event.SchedulerLoopIteration(detail = "TRIGGER (once): ${rule.id} '${rule.title}' (scheduled $triggerStr, key=$occurrenceKey)"))
                     fireReminder(rule, occurrenceKey, scheduledTime)
 
-                    // Auto-delete one-time reminder after firing (prevents re-activation)
-                    reminderRepository.delete(rule.id)
-                    eventLog.add(Event.Debug(detail = "One-time reminder ${rule.id} auto-deleted"))
+                    // Sticky one-time reminders remain available until explicitly completed/deleted.
+                    if (!rule.sticky) {
+                        reminderRepository.delete(rule.id)
+                        eventLog.add(Event.Debug(detail = "One-time reminder ${rule.id} auto-deleted"))
+                    }
                 }
             }
         } else {
@@ -432,6 +434,10 @@ class ReminderService : Service() {
                 if (nagState != null) {
                     // Active reminder - record to history
                     analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
+                    val rule = config?.reminders?.find { it.id == ruleId }
+                    if (rule?.sticky == true && rule.schedule.startsWith("once:")) {
+                        reminderRepository.delete(ruleId)
+                    }
                 } else {
                     // No active nag - this is an early completion from Today's Schedule
                     // Create a completed entry for the most recent scheduled time
@@ -477,6 +483,10 @@ class ReminderService : Service() {
                 if (nagState != null) {
                     // Record to history
                     analyticsRepository.recordCompletion(nagState, NagStatus.CANCELLED)
+                    val rule = config?.reminders?.find { it.id == ruleId }
+                    if (rule?.sticky == true && rule.schedule.startsWith("once:")) {
+                        reminderRepository.delete(ruleId)
+                    }
                 } else {
                     // Quest hasn't triggered yet - create a CANCELLED entry so it's filtered from Quest Log
                     val rule = config?.reminders?.find { it.id == ruleId }
@@ -573,7 +583,7 @@ class ReminderService : Service() {
 
         // Track last audible alert time
         if (!effectiveSilent) lastAlertTimeMs = now
-        val allNags = nagRepository.getActiveNags()
+        var allNags = nagRepository.getActiveNags()
 
         // Clear expired snoozes
         for (nag in allNags) {
@@ -584,6 +594,25 @@ class ReminderService : Service() {
                 }
             }
         }
+
+        // Count repeated alerts and expire non-sticky reminders at their configured limit.
+        for (nag in allNags) {
+            if (nag.status != NagStatus.ACTIVE.name) continue
+            val lastNagAt = nag.lastNagAt ?: nag.triggeredAt
+            if (now - lastNagAt < nag.nagIntervalMs) continue
+
+            val sticky = config?.reminders?.find { it.id == nag.ruleId }?.sticky == true
+            if (nag.hasReachedNagLimit(sticky)) {
+                nagRepository.markExpired(nag.occurrenceKey)
+                analyticsRepository.recordCompletion(nag, NagStatus.EXPIRED)
+                eventLog.add(Event.Debug(detail = "Auto-expired ${nag.ruleId} after ${nag.nagCount} nags"))
+            } else {
+                nagRepository.incrementNag(nag.occurrenceKey)
+            }
+        }
+
+        // Snooze and max-nag updates above can change which rows are active.
+        allNags = nagRepository.getActiveNags()
 
         val activeNags = allNags.filter {
             it.status == NagStatus.ACTIVE.name ||

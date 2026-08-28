@@ -4,6 +4,26 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NagStateEntityTest {
+    @Test
+    fun nagLimitDoesNotExpireStickyReminder() {
+        val entity = NagStateEntity(
+            occurrenceKey = "sticky@1000",
+            ruleId = "sticky",
+            scheduledTime = 1000L,
+            title = "Sticky",
+            triggeredAt = 1000L,
+            nagCount = 5,
+            maxNags = 5,
+            nagIntervalMs = 60_000L,
+            status = NagStatus.ACTIVE.name,
+            snoozedUntil = null,
+            lastNagAt = 1000L
+        )
+
+        assertTrue(entity.hasReachedNagLimit(sticky = false))
+        assertFalse(entity.hasReachedNagLimit(sticky = true))
+    }
+
 
     @Test
     fun createOccurrenceKeyFormatsCorrectly() {

@@ -43,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -83,7 +84,7 @@ fun EditRemindersScreen(
     onEdit: (ReminderEntity) -> Unit,
     onDelete: (String) -> Unit,
     onToggleEnabled: (String) -> Unit,
-    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int) -> Unit,
+    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean) -> Unit,
     onCancelEdit: () -> Unit,
     onBack: () -> Unit,
     onLoadFromFile: () -> Unit = {},
@@ -503,7 +504,7 @@ private fun CompactQuestRow(
         // Quest info
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = reminder.title,
+                text = if (reminder.sticky) "★ ${reminder.title}" else reminder.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = if (reminder.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -621,7 +622,7 @@ private fun detectScheduleMode(schedule: String?): ScheduleMode {
 @Composable
 private fun QuestEditDialog(
     reminder: ReminderEntity?,
-    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int) -> Unit,
+    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
@@ -631,6 +632,8 @@ private fun QuestEditDialog(
     val now = java.util.Calendar.getInstance()
 
     var title by remember { mutableStateOf(reminder?.title ?: "") }
+    var maxNags by remember { mutableStateOf(reminder?.maxNags ?: 100) }
+    var sticky by remember { mutableStateOf(reminder?.sticky ?: false) }
     var scheduleMode by remember { mutableStateOf(initialMode) }
     var hour by remember { mutableStateOf(parsed?.first ?: now.get(java.util.Calendar.HOUR_OF_DAY)) }
     var minute by remember { mutableStateOf(parsed?.second ?: now.get(java.util.Calendar.MINUTE)) }
@@ -964,6 +967,46 @@ private fun QuestEditDialog(
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("STICKY", style = MaterialTheme.typography.labelMedium, color = MegadriveGold)
+                        Text(
+                            "Never auto-expire this quest",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = sticky,
+                        onCheckedChange = { sticky = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MegadriveGold,
+                            checkedTrackColor = MegadriveGold.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                Text("MAX NAGS: $maxNags", style = MaterialTheme.typography.labelMedium, color = MegadriveOrange)
+                Slider(
+                    value = maxNags.toFloat(),
+                    onValueChange = { maxNags = kotlin.math.round(it).toInt().coerceIn(1, 100) },
+                    valueRange = 1f..100f,
+                    steps = 98,
+                    enabled = !sticky,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = if (sticky) "Unlimited while sticky is enabled" else "Quest expires after $maxNags alerts",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 // Delete button (only when editing)
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1013,7 +1056,7 @@ private fun QuestEditDialog(
                             rawCronText.trim()
                         }
                     }
-                    onSave(title.trim(), schedule, reminder?.nagIntervalMinutes ?: 5, reminder?.maxNags ?: 100)
+                    onSave(title.trim(), schedule, reminder?.nagIntervalMinutes ?: 5, maxNags, sticky)
                 },
                 enabled = title.isNotBlank() && when (scheduleMode) {
                     ScheduleMode.VECKA -> selectedDays.isNotEmpty()

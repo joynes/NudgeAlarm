@@ -26,6 +26,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -59,7 +60,7 @@ fun SettingsScreen(
     onPreviewSound: (Uri?) -> Unit,
     onStopPreview: () -> Unit,
     onNavigateToPermissions: () -> Unit,
-    onSetStaleTaskThresholdDays: (Int) -> Unit,
+    onSetOldReminderRetentionMinutes: (Int) -> Unit,
     onToggleAlertOnlyWhenActive: (Boolean) -> Unit,
     onSetMinAlertIntervalMinutes: (Int) -> Unit,
     onBack: () -> Unit,
@@ -262,7 +263,7 @@ fun SettingsScreen(
                 }
             }
 
-            // === STALE TASK CLEANUP ===
+            // === OLD REMINDER RETENTION ===
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -276,45 +277,54 @@ fun SettingsScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = ">> DAY RESET",
+                        text = ">> QUEST RETENTION",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MegadriveOrange
                     )
                     Text(
-                        text = "Auto-clear active quests from yesterday if they repeat every X days or less",
+                        text = "How long non-sticky quests stay active",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(1, 2, 3, 7, 14).forEach { days ->
-                            val isSelected = uiState.staleTaskThresholdDays == days
-                            OutlinedButton(
-                                onClick = { onSetStaleTaskThresholdDays(days) },
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (isSelected) MegadriveOrange else Color.Transparent,
-                                    contentColor = if (isSelected) Color.Black else MegadriveOrange
-                                ),
-                                border = BorderStroke(1.dp, MegadriveOrange),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = if (days == 1) "1d" else "${days}d",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
-                    }
+                    val retentionOptions = listOf(
+                        15 to "15 min",
+                        30 to "30 min",
+                        60 to "1 hour",
+                        120 to "2 hours",
+                        360 to "6 hours",
+                        720 to "12 hours",
+                        1440 to "1 day",
+                        2880 to "2 days",
+                        4320 to "3 days",
+                        10080 to "7 days"
+                    )
+                    val retentionIndex = retentionOptions.indexOfFirst {
+                        it.first == uiState.oldReminderRetentionMinutes
+                    }.takeIf { it >= 0 } ?: retentionOptions.indices.minByOrNull {
+                        kotlin.math.abs(retentionOptions[it].first - uiState.oldReminderRetentionMinutes)
+                    } ?: 6
+                    Text(
+                        text = retentionOptions[retentionIndex].second,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MegadriveOrange
+                    )
+                    Slider(
+                        value = retentionIndex.toFloat(),
+                        onValueChange = { index ->
+                            onSetOldReminderRetentionMinutes(
+                                retentionOptions[kotlin.math.round(index).toInt().coerceIn(retentionOptions.indices)].first
+                            )
+                        },
+                        valueRange = 0f..retentionOptions.lastIndex.toFloat(),
+                        steps = retentionOptions.size - 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = when (uiState.staleTaskThresholdDays) {
-                            1 -> "Daily and sub-daily quests reset at midnight"
-                            else -> "Quests repeating every ${uiState.staleTaskThresholdDays} days or less reset at midnight"
-                        },
+                        text = "Sticky quests remain until you complete or abandon them",
                         style = MaterialTheme.typography.bodySmall,
                         color = MegadriveOrange.copy(alpha = 0.7f)
                     )

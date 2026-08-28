@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import se.joynes.nudgealarm.core.config.AppConfig
 import se.joynes.nudgealarm.core.config.ReminderConfig
-import se.joynes.nudgealarm.core.config.approximateIntervalDays
 import se.joynes.nudgealarm.core.cron.CronExpression
 import se.joynes.nudgealarm.core.event.Event
 import se.joynes.nudgealarm.database.NagDatabase
@@ -141,25 +140,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Auto-expires ACTIVE nags that started on a previous day when the rule's
-     * recurrence interval is within the stale threshold setting.
-     */
+    /** Auto-expires old ACTIVE nags unless their reminder is sticky. */
     private suspend fun cleanupStaleActiveReminders() {
-        val startOfDay = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-
-        val thresholdDays = settingsStore.staleTaskThresholdDays
+        val cutoff = System.currentTimeMillis() -
+            settingsStore.oldReminderRetentionMinutes * 60_000L
 
         val staleRuleIds = ReminderService.activeReminders.values
-            .filter { it.triggeredAt < startOfDay }
+            .filter { it.triggeredAt < cutoff }
             .filter { active ->
                 val rule = ReminderService.currentConfig?.reminders?.find { it.id == active.ruleId }
-                rule != null && rule.approximateIntervalDays() <= thresholdDays
+                rule?.sticky != true
             }
             .map { it.ruleId }
 
@@ -395,6 +385,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         appendLine("    schedule: \"${config.schedule}\"")
                         appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                         appendLine("    max_nags: ${config.maxNags}")
+                        appendLine("    sticky: ${config.sticky}")
                         appendLine("    sound: ${config.sound}")
                         appendLine("    vibration: ${config.vibration}")
                         appendLine("    snooze_options:")
@@ -443,6 +434,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         appendLine("    schedule: \"${config.schedule}\"")
                         appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                         appendLine("    max_nags: ${config.maxNags}")
+                        appendLine("    sticky: ${config.sticky}")
                         appendLine()
                     }
                 }
@@ -806,6 +798,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appendLine("    schedule: \"${config.schedule}\"")
                     appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                     appendLine("    max_nags: ${config.maxNags}")
+                    appendLine("    sticky: ${config.sticky}")
                 }
             }
 
@@ -908,6 +901,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 appendLine("    schedule: \"${config.schedule}\"")
                 appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                 appendLine("    max_nags: ${config.maxNags}")
+                appendLine("    sticky: ${config.sticky}")
                 appendLine("    sound: ${config.sound}")
                 appendLine("    vibration: ${config.vibration}")
                 appendLine("    snooze_options:")
@@ -1320,6 +1314,7 @@ reminders:
                 appendLine("    schedule: \"${config.schedule}\"")
                 appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                 appendLine("    max_nags: ${config.maxNags}")
+                appendLine("    sticky: ${config.sticky}")
             }
         }
     }

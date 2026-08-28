@@ -1,6 +1,7 @@
 package se.joynes.nudgealarm.database
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 import se.joynes.nudgealarm.core.config.ReminderConfig
 import kotlin.time.Duration.Companion.minutes
@@ -17,6 +18,8 @@ data class ReminderEntity(
     val schedule: String,              // Cron expression
     val nagIntervalMinutes: Int = 5,
     val maxNags: Int = 100,
+    @ColumnInfo(defaultValue = "0")
+    val sticky: Boolean = false,
     val enabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
@@ -27,7 +30,8 @@ data class ReminderEntity(
             title = title,
             schedule = schedule,
             nagInterval = nagIntervalMinutes.minutes,
-            maxNags = maxNags
+            maxNags = maxNags,
+            sticky = sticky
         )
     }
 
@@ -38,7 +42,8 @@ data class ReminderEntity(
                 title = config.title,
                 schedule = config.schedule,
                 nagIntervalMinutes = config.nagInterval.inWholeMinutes.toInt(),
-                maxNags = config.maxNags
+                maxNags = config.maxNags,
+                sticky = config.sticky
             )
         }
     }
