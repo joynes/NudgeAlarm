@@ -43,7 +43,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -632,7 +631,6 @@ private fun QuestEditDialog(
     val now = java.util.Calendar.getInstance()
 
     var title by remember { mutableStateOf(reminder?.title ?: "") }
-    var maxNags by remember { mutableStateOf(reminder?.maxNags ?: 100) }
     var sticky by remember { mutableStateOf(reminder?.sticky ?: false) }
     var scheduleMode by remember { mutableStateOf(initialMode) }
     var hour by remember { mutableStateOf(parsed?.first ?: now.get(java.util.Calendar.HOUR_OF_DAY)) }
@@ -992,21 +990,6 @@ private fun QuestEditDialog(
                     )
                 }
 
-                Text("MAX NAGS: $maxNags", style = MaterialTheme.typography.labelMedium, color = MegadriveOrange)
-                Slider(
-                    value = maxNags.toFloat(),
-                    onValueChange = { maxNags = kotlin.math.round(it).toInt().coerceIn(1, 100) },
-                    valueRange = 1f..100f,
-                    steps = 98,
-                    enabled = !sticky,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = if (sticky) "Unlimited while sticky is enabled" else "Quest expires after $maxNags alerts",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
                 // Delete button (only when editing)
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1056,7 +1039,7 @@ private fun QuestEditDialog(
                             rawCronText.trim()
                         }
                     }
-                    onSave(title.trim(), schedule, reminder?.nagIntervalMinutes ?: 5, maxNags, sticky)
+                    onSave(title.trim(), schedule, reminder?.nagIntervalMinutes ?: 5, reminder?.maxNags ?: 100, sticky)
                 },
                 enabled = title.isNotBlank() && when (scheduleMode) {
                     ScheduleMode.VECKA -> selectedDays.isNotEmpty()

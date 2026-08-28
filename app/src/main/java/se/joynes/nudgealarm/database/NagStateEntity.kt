@@ -23,10 +23,6 @@ data class NagStateEntity(
     val lastNagAt: Long?,           // When last nag was sent
     val snoozeCount: Int = 0        // How many times this occurrence has been snoozed
 ) {
-    fun hasReachedNagLimit(sticky: Boolean): Boolean {
-        return !sticky && nagCount >= maxNags
-    }
-
     companion object {
         fun createOccurrenceKey(ruleId: String, scheduledTime: Long): String {
             return "$ruleId@$scheduledTime"

@@ -583,7 +583,7 @@ class ReminderService : Service() {
 
         // Track last audible alert time
         if (!effectiveSilent) lastAlertTimeMs = now
-        var allNags = nagRepository.getActiveNags()
+        val allNags = nagRepository.getActiveNags()
 
         // Clear expired snoozes
         for (nag in allNags) {
@@ -594,25 +594,6 @@ class ReminderService : Service() {
                 }
             }
         }
-
-        // Count repeated alerts and expire non-sticky reminders at their configured limit.
-        for (nag in allNags) {
-            if (nag.status != NagStatus.ACTIVE.name) continue
-            val lastNagAt = nag.lastNagAt ?: nag.triggeredAt
-            if (now - lastNagAt < nag.nagIntervalMs) continue
-
-            val sticky = config?.reminders?.find { it.id == nag.ruleId }?.sticky == true
-            if (nag.hasReachedNagLimit(sticky)) {
-                nagRepository.markExpired(nag.occurrenceKey)
-                analyticsRepository.recordCompletion(nag, NagStatus.EXPIRED)
-                eventLog.add(Event.Debug(detail = "Auto-expired ${nag.ruleId} after ${nag.nagCount} nags"))
-            } else {
-                nagRepository.incrementNag(nag.occurrenceKey)
-            }
-        }
-
-        // Snooze and max-nag updates above can change which rows are active.
-        allNags = nagRepository.getActiveNags()
 
         val activeNags = allNags.filter {
             it.status == NagStatus.ACTIVE.name ||
