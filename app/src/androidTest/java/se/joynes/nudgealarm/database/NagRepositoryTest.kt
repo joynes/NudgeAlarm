@@ -296,6 +296,22 @@ class NagRepositoryTest {
     }
 
     @Test
+    fun deleteByRuleIdRemovesOnlySelectedQuestOccurrences() = runTest {
+        val selectedRule = createTestRule("selected")
+        val otherRule = createTestRule("other")
+        val (_, activeKey) = repository.tryFire(selectedRule, 1000L)
+        val (_, finishedKey) = repository.tryFire(selectedRule, 2000L)
+        val (_, otherKey) = repository.tryFire(otherRule, 3000L)
+        repository.markDone(finishedKey)
+
+        repository.deleteByRuleId(selectedRule.id)
+
+        assertNull(repository.getByKey(activeKey))
+        assertNull(repository.getByKey(finishedKey))
+        assertNotNull(repository.getByKey(otherKey))
+    }
+
+    @Test
     fun concurrentDuplicateHandling() = runTest {
         // Simulate what happens when scheduler polls twice in quick succession
         val rule = createTestRule()

@@ -1,6 +1,7 @@
 package se.joynes.nudgealarm.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -124,6 +126,7 @@ fun MainScreen(
     onSnooze: (String, Int) -> Unit,
     onCancel: (String) -> Unit,
     onCancelAll: (List<String>) -> Unit,
+    onDeletePermanently: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showPresetDialog by remember { mutableStateOf(false) }
@@ -141,6 +144,8 @@ fun MainScreen(
     var showCompleteRemainingConfirm by remember { mutableStateOf(false) }
     var showSnoozeAllActive by remember { mutableStateOf(false) }
     var showSnoozeAllRemaining by remember { mutableStateOf(false) }
+    var advancedQuest by remember { mutableStateOf<ActiveReminderUi?>(null) }
+    var questPendingPermanentDelete by remember { mutableStateOf<ActiveReminderUi?>(null) }
     val clipboardManager = LocalClipboardManager.current
 
     Column(
@@ -296,7 +301,8 @@ fun MainScreen(
                             reminder = reminder,
                             onDone = { onMarkDone(reminder.ruleId) },
                             onSnooze = { minutes -> onSnooze(reminder.ruleId, minutes) },
-                            onCancel = { onCancel(reminder.ruleId) }
+                            onCancel = { onCancel(reminder.ruleId) },
+                            onLongPress = { advancedQuest = reminder }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -479,6 +485,87 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    advancedQuest?.let { reminder ->
+        AlertDialog(
+            onDismissRequest = { advancedQuest = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    ">> ADVANCED QUEST OPTIONS",
+                    color = MegadriveGold,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(reminder.title, fontWeight = FontWeight.Bold)
+                    Text(
+                        "These actions affect the quest schedule, not only today's active reminder.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            advancedQuest = null
+                            onNavigateToEditReminders()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MegadriveCyan)
+                    ) {
+                        Text("OPEN QUEST EDITOR", color = MegadriveCyan)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            questPendingPermanentDelete = reminder
+                            advancedQuest = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MegadriveRed)
+                    ) {
+                        Text("DELETE PERMANENTLY", color = MegadriveRed)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { advancedQuest = null }) {
+                    Text("< CLOSE", color = MegadriveCyan)
+                }
+            }
+        )
+    }
+
+    questPendingPermanentDelete?.let { reminder ->
+        AlertDialog(
+            onDismissRequest = { questPendingPermanentDelete = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text("! DELETE QUEST?", color = MegadriveRed, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    "Delete '${reminder.title}' permanently? The active quest and its schedule will be removed. Past statistics remain."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeletePermanently(reminder.ruleId)
+                        questPendingPermanentDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MegadriveRed)
+                ) {
+                    Text("DELETE", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { questPendingPermanentDelete = null }) {
+                    Text("< CANCEL", color = MegadriveCyan)
+                }
+            }
+        )
     }
 
     // === MENU DIALOG - Pause menu ===
@@ -1488,12 +1575,14 @@ private fun RetroMenuItem(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActiveQuestCard(
     reminder: ActiveReminderUi,
     onDone: () -> Unit,
     onSnooze: (Int) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     val wasSnoozed = reminder.snoozeCount > 0
     val borderColor = if (wasSnoozed) MegadrivePurple else MegadriveOrange
@@ -1501,6 +1590,11 @@ private fun ActiveQuestCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongPress,
+                onLongClickLabel = "Open advanced quest options"
+            )
             .border(
                 width = if (wasSnoozed) 2.dp else 1.dp,
                 color = borderColor,
@@ -1541,6 +1635,11 @@ private fun ActiveQuestCard(
                     color = MegadrivePurple
                 )
             }
+            Text(
+                text = "Hold quest for advanced options",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(4.dp))
 
             // COMPLETE and ABANDON buttons on same row

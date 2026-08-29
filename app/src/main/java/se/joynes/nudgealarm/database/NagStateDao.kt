@@ -52,6 +52,10 @@ interface NagStateDao {
     @Query("DELETE FROM nag_states")
     suspend fun deleteAll()
 
+    /** Delete every current and finished state row for a reminder rule. */
+    @Query("DELETE FROM nag_states WHERE ruleId = :ruleId")
+    suspend fun deleteByRuleId(ruleId: String)
+
     /**
      * Insert a new nag state. Returns -1 if already exists (IGNORE strategy).
      * This provides atomic deduplication.

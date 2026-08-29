@@ -401,6 +401,7 @@ fun NudgeAlarmApp() {
             onSnooze = { ruleId, minutes -> viewModel.snoozeReminder(ruleId, minutes) },
             onCancel = { ruleId -> viewModel.cancelReminder(ruleId) },
             onCancelAll = { ruleIds -> viewModel.cancelAllReminders(ruleIds) },
+            onDeletePermanently = { ruleId -> viewModel.deleteReminderPermanently(ruleId) },
             modifier = Modifier.padding(innerPadding)
         )
 

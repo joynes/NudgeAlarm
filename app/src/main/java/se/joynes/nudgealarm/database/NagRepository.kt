@@ -242,4 +242,9 @@ class NagRepository(private val dao: NagStateDao) {
     suspend fun clearAll() {
         dao.deleteAll()
     }
+
+    /** Remove all persisted occurrence state for a reminder rule. */
+    suspend fun deleteByRuleId(ruleId: String) {
+        dao.deleteByRuleId(ruleId)
+    }
 }

@@ -666,6 +666,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Permanently remove a quest's schedule and all of its persisted occurrence
+     * state. Historical analytics are intentionally retained.
+     */
+    fun deleteReminderPermanently(ruleId: String) {
+        eventLogStore.add(Event.UiAction(action = "Delete quest permanently from UI: $ruleId"))
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                nagRepository.deleteByRuleId(ruleId)
+                reminderRepository.delete(ruleId)
+            }
+
+            ReminderService.activeReminders.remove(ruleId)
+            updateState()
+
+            val intent = Intent(getApplication(), ReminderService::class.java).apply {
+                action = ReminderService.ACTION_RELOAD
+            }
+            getApplication<Application>().startService(intent)
+        }
+    }
+
+    /**
      * Create a new empty schema - clears database so user can add their own quests.
      * Returns immediately after database is cleared (suspending function).
      */
