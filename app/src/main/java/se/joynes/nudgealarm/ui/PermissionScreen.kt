@@ -205,7 +205,7 @@ private fun getPermissionStates(
         ),
         PermissionState(
             name = "Battery Saver",
-            description = "Open Android battery settings if reminders are delayed",
+            description = "Search for NudgeAlarm and select Unrestricted battery use (or turn optimization off)",
             isGranted = powerManager.isIgnoringBatteryOptimizations(context.packageName),
             onRequest = {
                 val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
