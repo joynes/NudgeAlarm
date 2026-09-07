@@ -184,6 +184,7 @@ fun NudgeAlarmApp() {
     var quietMode by remember { mutableStateOf(settingsStore.quietMode) }
     var showMenuDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingEditReminderId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         eventLog.add(Event.AppForegrounded())
@@ -396,6 +397,11 @@ fun NudgeAlarmApp() {
                 eventLog.add(Event.NavigatedTo(screen = "EditReminders"))
                 currentScreen = Screen.EditReminders
             },
+            onEditReminder = { ruleId ->
+                pendingEditReminderId = ruleId
+                eventLog.add(Event.NavigatedTo(screen = "EditReminders ($ruleId)"))
+                currentScreen = Screen.EditReminders
+            },
             onMarkDone = { ruleId -> viewModel.markReminderDone(ruleId) },
             onMarkAllDone = { ruleIds -> viewModel.markAllRemindersDone(ruleIds) },
             onSnooze = { ruleId, minutes -> viewModel.snoozeReminder(ruleId, minutes) },
@@ -500,6 +506,13 @@ fun NudgeAlarmApp() {
             // Refresh data every time this screen is shown
             LaunchedEffect(Unit) {
                 editRemindersViewModel.refresh()
+            }
+
+            LaunchedEffect(pendingEditReminderId) {
+                pendingEditReminderId?.let { ruleId ->
+                    editRemindersViewModel.startEditById(ruleId)
+                    pendingEditReminderId = null
+                }
             }
 
             EditRemindersScreen(

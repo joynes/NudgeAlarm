@@ -121,6 +121,7 @@ fun MainScreen(
     onNavigateToEventLog: () -> Unit,
     onNavigateToRoutines: () -> Unit,
     onNavigateToEditReminders: () -> Unit,
+    onEditReminder: (String) -> Unit,
     onMarkDone: (String) -> Unit,
     onMarkAllDone: (List<String>) -> Unit,
     onSnooze: (String, Int) -> Unit,
@@ -509,12 +510,12 @@ fun MainScreen(
                     OutlinedButton(
                         onClick = {
                             advancedQuest = null
-                            onNavigateToEditReminders()
+                            onEditReminder(reminder.ruleId)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         border = BorderStroke(1.dp, MegadriveCyan)
                     ) {
-                        Text("OPEN QUEST EDITOR", color = MegadriveCyan)
+                        Text("EDIT QUEST", color = MegadriveCyan)
                     }
                     OutlinedButton(
                         onClick = {

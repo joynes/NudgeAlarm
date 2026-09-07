@@ -53,6 +53,20 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
         _uiState.value = _uiState.value.copy(editingReminder = reminder, isAddingNew = false)
     }
 
+    fun startEditById(id: String) {
+        viewModelScope.launch {
+            val reminder = withContext(Dispatchers.IO) {
+                reminderRepository.getById(id)
+            }
+            if (reminder != null) {
+                _uiState.value = _uiState.value.copy(
+                    editingReminder = reminder,
+                    isAddingNew = false
+                )
+            }
+        }
+    }
+
     fun cancelEdit() {
         _uiState.value = _uiState.value.copy(editingReminder = null, isAddingNew = false)
     }
