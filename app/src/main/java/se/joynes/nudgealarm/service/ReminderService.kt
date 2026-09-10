@@ -477,16 +477,16 @@ class ReminderService : Service() {
             if (now - cachedLocationAt < 2.minutes.inWholeMilliseconds) return cached
         }
 
-        val lastKnown = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+        val lastKnown = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
             .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
             .maxByOrNull { it.time }
-        if (lastKnown != null && now - lastKnown.time < 10.minutes.inWholeMilliseconds) {
+        if (lastKnown != null && now - lastKnown.time < 2.minutes.inWholeMilliseconds) {
             cachedLocation = lastKnown
             cachedLocationAt = now
             return lastKnown
         }
 
-        val provider = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+        val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
             .firstOrNull { runCatching { locationManager.isProviderEnabled(it) }.getOrDefault(false) }
             ?: return lastKnown
         val fresh = withTimeoutOrNull(15_000) {
@@ -510,7 +510,7 @@ class ReminderService : Service() {
             cachedLocation = fresh
             cachedLocationAt = System.currentTimeMillis()
         }
-        return fresh ?: lastKnown
+        return fresh
     }
 
     private fun updateNextTriggerDisplay(appConfig: AppConfig) {
