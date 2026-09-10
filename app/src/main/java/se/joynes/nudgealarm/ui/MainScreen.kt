@@ -28,7 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.AlertDialog
@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import se.joynes.nudgealarm.R
@@ -1426,7 +1427,10 @@ private fun RetroHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             // Mascot
             Image(
                 painter = painterResource(id = R.drawable.mascot),
@@ -1434,12 +1438,14 @@ private fun RetroHeader(
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "NUDGEALARM",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MegadriveGold
+                    color = MegadriveGold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -1463,12 +1469,17 @@ private fun RetroHeader(
                         text = currentGameName,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
-                        color = MegadriveCyan
+                        color = MegadriveCyan,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = onToggleQuietMode, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
@@ -1477,14 +1488,19 @@ private fun RetroHeader(
                     modifier = Modifier.size(22.dp)
                 )
             }
-            Button(
+            IconButton(
                 onClick = onMenuClick,
-                shape = RoundedCornerShape(4.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MegadrivePurple),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                modifier = Modifier.height(36.dp)
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MegadrivePurple)
             ) {
-                Text("MENU", style = MaterialTheme.typography.labelLarge, color = Color.White)
+                Icon(
+                    imageVector = Icons.Filled.Menu,
+                    contentDescription = "Open menu",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     }
