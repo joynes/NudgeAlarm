@@ -521,8 +521,17 @@ fun NudgeAlarmApp() {
                 onEdit = { reminder -> editRemindersViewModel.startEdit(reminder) },
                 onDelete = { id -> editRemindersViewModel.deleteReminder(id) },
                 onToggleEnabled = { id -> editRemindersViewModel.toggleEnabled(id) },
-                onSave = { title, schedule, nagInterval, maxNags, sticky ->
-                    editRemindersViewModel.saveReminder(title, schedule, nagInterval, maxNags, sticky)
+                onSave = { title, schedule, nagInterval, maxNags, sticky, placeId ->
+                    editRemindersViewModel.saveReminder(title, schedule, nagInterval, maxNags, sticky, placeId)
+                },
+                onCreateSavedPlace = { name, latitude, longitude, radiusMeters ->
+                    editRemindersViewModel.createSavedPlace(name, latitude, longitude, radiusMeters)
+                },
+                onAddSavedPosition = { placeId, label, latitude, longitude, radiusMeters ->
+                    editRemindersViewModel.addSavedPosition(placeId, label, latitude, longitude, radiusMeters)
+                },
+                onSelectSavedPosition = { placeId, locationId ->
+                    editRemindersViewModel.selectSavedPosition(placeId, locationId)
                 },
                 onCancelEdit = { editRemindersViewModel.cancelEdit() },
                 onBack = {

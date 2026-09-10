@@ -386,6 +386,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                         appendLine("    max_nags: ${config.maxNags}")
                         appendLine("    sticky: ${config.sticky}")
+                        config.placeId?.let { appendLine("    place_id: \"$it\"") }
                         appendLine("    sound: ${config.sound}")
                         appendLine("    vibration: ${config.vibration}")
                         appendLine("    snooze_options:")
@@ -435,6 +436,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                         appendLine("    max_nags: ${config.maxNags}")
                         appendLine("    sticky: ${config.sticky}")
+                        config.placeId?.let { appendLine("    place_id: \"$it\"") }
                         appendLine()
                     }
                 }
@@ -821,6 +823,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                     appendLine("    max_nags: ${config.maxNags}")
                     appendLine("    sticky: ${config.sticky}")
+                    config.placeId?.let { appendLine("    place_id: \"$it\"") }
                 }
             }
 
@@ -924,6 +927,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                 appendLine("    max_nags: ${config.maxNags}")
                 appendLine("    sticky: ${config.sticky}")
+                config.placeId?.let { appendLine("    place_id: \"$it\"") }
                 appendLine("    sound: ${config.sound}")
                 appendLine("    vibration: ${config.vibration}")
                 appendLine("    snooze_options:")
@@ -1337,6 +1341,7 @@ reminders:
                 appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                 appendLine("    max_nags: ${config.maxNags}")
                 appendLine("    sticky: ${config.sticky}")
+                config.placeId?.let { appendLine("    place_id: \"$it\"") }
             }
         }
     }

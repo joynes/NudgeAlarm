@@ -1,6 +1,6 @@
 # Privacy Policy for NudgeAlarm
 
-**Last updated: 2026-03-16**
+**Last updated: 2026-09-10**
 
 ## Overview
 
@@ -10,13 +10,14 @@ NudgeAlarm is a personal reminder app that helps you stay on top of your tasks u
 
 NudgeAlarm does **not** collect, transmit, or share any personal data with third parties.
 
-All data created within the app (reminders, settings, preferences) is stored **locally on your device only**.
+All data created within the app (reminders, saved places, coordinates, settings, preferences) is stored **locally on your device only**.
 
 ## Permissions Used
 
 - **Notifications**: To display reminder alerts and persistent notifications.
 - **Boot completed**: To reschedule reminders after device restart.
 - **Foreground service**: To keep the reminder service running reliably.
+- **Precise and background location**: Only when you choose to create place-based reminders. Location is checked locally to decide whether a linked reminder may activate. Coordinates are never transmitted automatically; they are included only if you explicitly create a full data backup.
 - **Alarm (exact)**: To trigger reminders at precise scheduled times.
 
 None of these permissions are used to collect or transmit personal information.

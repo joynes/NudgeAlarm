@@ -12,17 +12,21 @@ import kotlinx.coroutines.withContext
 import se.joynes.nudgealarm.database.NagDatabase
 import se.joynes.nudgealarm.database.ReminderEntity
 import se.joynes.nudgealarm.database.ReminderRepository
+import se.joynes.nudgealarm.database.SavedPlaceRepository
+import se.joynes.nudgealarm.database.SavedPlaceWithLocations
 
 data class EditRemindersUiState(
     val reminders: List<ReminderEntity> = emptyList(),
     val isLoading: Boolean = true,
     val editingReminder: ReminderEntity? = null,
-    val isAddingNew: Boolean = false
+    val isAddingNew: Boolean = false,
+    val savedPlaces: List<SavedPlaceWithLocations> = emptyList()
 )
 
 class EditRemindersViewModel(application: Application) : AndroidViewModel(application) {
 
     private val reminderRepository: ReminderRepository
+    private val savedPlaceRepository: SavedPlaceRepository
 
     private val _uiState = MutableStateFlow(EditRemindersUiState())
     val uiState: StateFlow<EditRemindersUiState> = _uiState.asStateFlow()
@@ -30,6 +34,7 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
     init {
         val database = NagDatabase.getInstance(application)
         reminderRepository = ReminderRepository(database.reminderDao())
+        savedPlaceRepository = SavedPlaceRepository(database.savedPlaceDao())
         loadReminders()
     }
 
@@ -37,8 +42,10 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val reminders = reminderRepository.getAllReminders()
+                val savedPlaces = savedPlaceRepository.getAll()
                 _uiState.value = _uiState.value.copy(
                     reminders = reminders,
+                    savedPlaces = savedPlaces,
                     isLoading = false
                 )
             }
@@ -76,7 +83,8 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
         schedule: String,
         nagIntervalMinutes: Int,
         maxNags: Int,
-        sticky: Boolean
+        sticky: Boolean,
+        placeId: String?
     ) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -89,6 +97,7 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
                         nagIntervalMinutes = nagIntervalMinutes,
                         maxNags = maxNags,
                         sticky = sticky,
+                        placeId = placeId,
                         updatedAt = System.currentTimeMillis()
                     )
                     reminderRepository.update(updated)
@@ -99,11 +108,39 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
                         schedule = schedule,
                         nagIntervalMinutes = nagIntervalMinutes,
                         maxNags = maxNags,
-                        sticky = sticky
+                        sticky = sticky,
+                        placeId = placeId
                     )
                 }
             }
             _uiState.value = _uiState.value.copy(editingReminder = null, isAddingNew = false)
+            loadReminders()
+        }
+    }
+
+    fun createSavedPlace(name: String, latitude: Double, longitude: Double, radiusMeters: Int) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                savedPlaceRepository.createPlace(name, latitude, longitude, radiusMeters)
+            }
+            loadReminders()
+        }
+    }
+
+    fun addSavedPosition(placeId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                savedPlaceRepository.addLocation(placeId, latitude, longitude, radiusMeters, label)
+            }
+            loadReminders()
+        }
+    }
+
+    fun selectSavedPosition(placeId: String, locationId: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                savedPlaceRepository.setActiveLocation(placeId, locationId)
+            }
             loadReminders()
         }
     }

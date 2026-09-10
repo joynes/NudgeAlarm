@@ -60,7 +60,8 @@ class ReminderRepository(private val dao: ReminderDao) {
         schedule: String,
         nagIntervalMinutes: Int = 5,
         maxNags: Int = 100,
-        sticky: Boolean = false
+        sticky: Boolean = false,
+        placeId: String? = null
     ): ReminderEntity {
         val id = generateId(title)
         val reminder = ReminderEntity(
@@ -69,7 +70,8 @@ class ReminderRepository(private val dao: ReminderDao) {
             schedule = schedule,
             nagIntervalMinutes = nagIntervalMinutes,
             maxNags = maxNags,
-            sticky = sticky
+            sticky = sticky,
+            placeId = placeId
         )
         dao.insert(reminder)
         return reminder

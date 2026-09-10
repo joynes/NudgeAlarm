@@ -9,6 +9,8 @@ import se.joynes.nudgealarm.database.NagDatabase
 import se.joynes.nudgealarm.database.NagHistoryEntity
 import se.joynes.nudgealarm.database.NagStateEntity
 import se.joynes.nudgealarm.database.ReminderEntity
+import se.joynes.nudgealarm.database.SavedPlaceEntity
+import se.joynes.nudgealarm.database.SavedPlaceLocationEntity
 
 data class ExportedSettings(
     @SerializedName("alarmSound") val alarmSound: String,
@@ -19,11 +21,13 @@ data class ExportedSettings(
 )
 
 data class DataExport(
-    @SerializedName("version") val version: Int = 1,
+    @SerializedName("version") val version: Int = 2,
     @SerializedName("exportedAt") val exportedAt: Long,
     @SerializedName("reminders") val reminders: List<ReminderEntity>,
     @SerializedName("nagStates") val nagStates: List<NagStateEntity>,
     @SerializedName("nagHistory") val nagHistory: List<NagHistoryEntity>,
+    @SerializedName("savedPlaces") val savedPlaces: List<SavedPlaceEntity>? = emptyList(),
+    @SerializedName("savedPlaceLocations") val savedPlaceLocations: List<SavedPlaceLocationEntity>? = emptyList(),
     @SerializedName("settings") val settings: ExportedSettings
 )
 
@@ -37,6 +41,8 @@ class DataExportStore(private val context: Context) {
             val reminders = db.reminderDao().getAll()
             val nagStates = db.nagStateDao().getAll()
             val nagHistory = db.nagHistoryDao().getAll()
+            val savedPlaces = db.savedPlaceDao().getAllPlaces()
+            val savedPlaceLocations = savedPlaces.flatMap { db.savedPlaceDao().getLocations(it.id) }
 
             val settings = ExportedSettings(
                 alarmSound = settingsStore.alarmSound.name,
@@ -51,6 +57,8 @@ class DataExportStore(private val context: Context) {
                 reminders = reminders,
                 nagStates = nagStates,
                 nagHistory = nagHistory,
+                savedPlaces = savedPlaces,
+                savedPlaceLocations = savedPlaceLocations,
                 settings = settings
             )
 
@@ -73,7 +81,7 @@ class DataExportStore(private val context: Context) {
             val export = gson.fromJson(json, DataExport::class.java)
                 ?: return Result.failure(Exception("Invalid export file"))
 
-            if (export.version != 1) {
+            if (export.version !in 1..2) {
                 return Result.failure(Exception("Unsupported export version: ${export.version}"))
             }
 
@@ -81,10 +89,14 @@ class DataExportStore(private val context: Context) {
             db.reminderDao().deleteAll()
             db.nagStateDao().deleteAll()
             db.nagHistoryDao().deleteAll()
+            db.savedPlaceDao().deleteAllLocations()
+            db.savedPlaceDao().deleteAllPlaces()
 
             if (export.reminders.isNotEmpty()) db.reminderDao().insertAll(export.reminders)
             if (export.nagStates.isNotEmpty()) db.nagStateDao().insertAll(export.nagStates)
             if (export.nagHistory.isNotEmpty()) db.nagHistoryDao().insertAll(export.nagHistory)
+            export.savedPlaces.orEmpty().forEach { db.savedPlaceDao().savePlace(it) }
+            export.savedPlaceLocations.orEmpty().forEach { db.savedPlaceDao().saveLocation(it) }
 
             // Restore settings
             settingsStore.alarmSound = AlarmSound.fromName(export.settings.alarmSound)

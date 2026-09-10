@@ -1,5 +1,16 @@
 package se.joynes.nudgealarm.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
+import android.net.Uri
+import android.os.CancellationSignal
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,11 +54,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,11 +68,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import se.joynes.nudgealarm.database.ReminderEntity
+import se.joynes.nudgealarm.database.SavedPlaceWithLocations
 import se.joynes.nudgealarm.ui.theme.MegadriveCyan
 import se.joynes.nudgealarm.ui.theme.MegadriveGold
 import se.joynes.nudgealarm.ui.theme.MegadriveGreen
@@ -83,7 +102,10 @@ fun EditRemindersScreen(
     onEdit: (ReminderEntity) -> Unit,
     onDelete: (String) -> Unit,
     onToggleEnabled: (String) -> Unit,
-    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean) -> Unit,
+    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean, placeId: String?) -> Unit,
+    onCreateSavedPlace: (name: String, latitude: Double, longitude: Double, radiusMeters: Int) -> Unit,
+    onAddSavedPosition: (placeId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) -> Unit,
+    onSelectSavedPosition: (placeId: String, locationId: String) -> Unit,
     onCancelEdit: () -> Unit,
     onBack: () -> Unit,
     onLoadFromFile: () -> Unit = {},
@@ -343,7 +365,11 @@ fun EditRemindersScreen(
     if (uiState.isAddingNew || uiState.editingReminder != null) {
         QuestEditDialog(
             reminder = uiState.editingReminder,
+            savedPlaces = uiState.savedPlaces,
             onSave = onSave,
+            onCreateSavedPlace = onCreateSavedPlace,
+            onAddSavedPosition = onAddSavedPosition,
+            onSelectSavedPosition = onSelectSavedPosition,
             onDelete = if (uiState.editingReminder != null) {
                 { showDeleteConfirm = uiState.editingReminder.id }
             } else null,
@@ -503,7 +529,11 @@ private fun CompactQuestRow(
         // Quest info
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (reminder.sticky) "★ ${reminder.title}" else reminder.title,
+                text = buildString {
+                    if (reminder.sticky) append("★ ")
+                    if (reminder.placeId != null) append("[LOC] ")
+                    append(reminder.title)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = if (reminder.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -621,7 +651,11 @@ private fun detectScheduleMode(schedule: String?): ScheduleMode {
 @Composable
 private fun QuestEditDialog(
     reminder: ReminderEntity?,
-    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean) -> Unit,
+    savedPlaces: List<SavedPlaceWithLocations>,
+    onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean, placeId: String?) -> Unit,
+    onCreateSavedPlace: (name: String, latitude: Double, longitude: Double, radiusMeters: Int) -> Unit,
+    onAddSavedPosition: (placeId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) -> Unit,
+    onSelectSavedPosition: (placeId: String, locationId: String) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
@@ -632,6 +666,80 @@ private fun QuestEditDialog(
 
     var title by remember { mutableStateOf(reminder?.title ?: "") }
     var sticky by remember { mutableStateOf(reminder?.sticky ?: false) }
+    var selectedPlaceId by remember { mutableStateOf(reminder?.placeId) }
+    var newPlaceName by remember { mutableStateOf("") }
+    var newPositionLabel by remember { mutableStateOf("") }
+    var pendingCreatedPlaceName by remember { mutableStateOf<String?>(null) }
+    var radiusMeters by remember { mutableStateOf(250f) }
+    var locationStatus by remember { mutableStateOf<String?>(null) }
+    var pendingLocationAction by remember { mutableStateOf<((Location) -> Unit)?>(null) }
+    var permissionRefresh by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val hasFineLocation = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    val hasBackgroundLocation = permissionRefresh >= 0 && ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    fun updateCurrentLocation() {
+        locationStatus = "Finding current location..."
+        captureCurrentLocation(context) { location ->
+            if (location == null) {
+                locationStatus = "Could not get a precise location. Check Location in Android settings."
+            } else {
+                pendingLocationAction?.invoke(location)
+                pendingLocationAction = null
+                locationStatus = "Position saved with ${location.accuracy.toInt()} m accuracy"
+            }
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (grants[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            updateCurrentLocation()
+        } else {
+            locationStatus = "Precise location permission is required for place-only quests."
+        }
+    }
+
+    fun requestCurrentLocation(action: (Location) -> Unit) {
+        pendingLocationAction = action
+        if (hasFineLocation) {
+            updateCurrentLocation()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) permissionRefresh++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    androidx.compose.runtime.LaunchedEffect(savedPlaces) {
+        pendingCreatedPlaceName?.let { pendingName ->
+            savedPlaces
+                .filter { it.place.name.equals(pendingName, ignoreCase = true) }
+                .maxByOrNull { it.place.createdAt }
+                ?.let {
+                    selectedPlaceId = it.place.id
+                    pendingCreatedPlaceName = null
+                }
+        }
+    }
     var scheduleMode by remember { mutableStateOf(initialMode) }
     var hour by remember { mutableStateOf(parsed?.first ?: now.get(java.util.Calendar.HOUR_OF_DAY)) }
     var minute by remember { mutableStateOf(parsed?.second ?: now.get(java.util.Calendar.MINUTE)) }
@@ -990,6 +1098,172 @@ private fun QuestEditDialog(
                     )
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                Text("PLACE", style = MaterialTheme.typography.labelMedium, color = MegadriveCyan)
+                Text(
+                    "Choose where this quest may activate",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedPlaceId == null,
+                        onClick = { selectedPlaceId = null },
+                        label = { Text("ANYWHERE") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MegadriveGreen,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    savedPlaces.forEach { savedPlace ->
+                        FilterChip(
+                            selected = selectedPlaceId == savedPlace.place.id,
+                            onClick = { selectedPlaceId = savedPlace.place.id },
+                            label = { Text(savedPlace.place.name) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MegadriveCyan,
+                                selectedLabelColor = Color.Black
+                            )
+                        )
+                    }
+                }
+
+                Text(
+                    "POSITION RADIUS: ${radiusMeters.toInt()} m",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MegadriveCyan
+                )
+                Slider(
+                    value = radiusMeters,
+                    onValueChange = { radiusMeters = it },
+                    valueRange = 100f..2000f,
+                    steps = 18
+                )
+
+                val selectedPlace = savedPlaces.firstOrNull { it.place.id == selectedPlaceId }
+                if (selectedPlace == null) {
+                    OutlinedTextField(
+                        value = newPlaceName,
+                        onValueChange = { newPlaceName = it },
+                        label = { Text("New saved place, e.g. Home") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MegadriveCyan,
+                            focusedLabelColor = MegadriveCyan
+                        )
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            requestCurrentLocation { location ->
+                                pendingCreatedPlaceName = newPlaceName.trim()
+                                onCreateSavedPlace(
+                                    newPlaceName.trim(),
+                                    location.latitude,
+                                    location.longitude,
+                                    radiusMeters.toInt()
+                                )
+                                newPlaceName = ""
+                            }
+                        },
+                        enabled = newPlaceName.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(1.dp, MegadriveCyan)
+                    ) {
+                        Text("SAVE CURRENT POSITION AS NEW PLACE", color = MegadriveCyan)
+                    }
+                } else {
+                    Text(
+                        "${selectedPlace.place.name.uppercase()} · ${selectedPlace.locations.size} saved position(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MegadriveGreen
+                    )
+                    OutlinedTextField(
+                        value = newPositionLabel,
+                        onValueChange = { newPositionLabel = it },
+                        label = { Text("Position label, e.g. Stockholm or Spain") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MegadriveCyan,
+                            focusedLabelColor = MegadriveCyan
+                        )
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            requestCurrentLocation { location ->
+                                onAddSavedPosition(
+                                    selectedPlace.place.id,
+                                    newPositionLabel,
+                                    location.latitude,
+                                    location.longitude,
+                                    radiusMeters.toInt()
+                                )
+                                newPositionLabel = ""
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(1.dp, MegadriveCyan)
+                    ) {
+                        Text("ADD HERE AND MAKE ACTIVE", color = MegadriveCyan)
+                    }
+                    selectedPlace.locations.forEach { savedLocation ->
+                        val active = savedLocation.id == selectedPlace.place.activeLocationId
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${savedLocation.label} · ${savedLocation.radiusMeters} m",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (active) MegadriveGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(
+                                onClick = {
+                                    onSelectSavedPosition(selectedPlace.place.id, savedLocation.id)
+                                },
+                                enabled = !active
+                            ) {
+                                Text(if (active) "ACTIVE" else "USE", color = if (active) MegadriveGreen else MegadriveCyan)
+                            }
+                        }
+                    }
+                }
+
+                locationStatus?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MegadriveCyan)
+                }
+                if (selectedPlaceId != null && !hasBackgroundLocation) {
+                    Text(
+                        "Allow Location > Allow all the time in Android settings, otherwise place-only quests remain waiting.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MegadriveOrange
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(1.dp, MegadriveOrange)
+                    ) {
+                        Text("OPEN LOCATION SETTINGS", color = MegadriveOrange)
+                    }
+                }
+
                 // Delete button (only when editing)
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1039,7 +1313,14 @@ private fun QuestEditDialog(
                             rawCronText.trim()
                         }
                     }
-                    onSave(title.trim(), schedule, reminder?.nagIntervalMinutes ?: 5, reminder?.maxNags ?: 100, sticky)
+                    onSave(
+                        title.trim(),
+                        schedule,
+                        reminder?.nagIntervalMinutes ?: 5,
+                        reminder?.maxNags ?: 100,
+                        sticky,
+                        selectedPlaceId
+                    )
                 },
                 enabled = title.isNotBlank() && when (scheduleMode) {
                     ScheduleMode.VECKA -> selectedDays.isNotEmpty()
@@ -1123,5 +1404,31 @@ private fun QuestEditDialog(
         ) {
             DatePicker(state = dateState)
         }
+    }
+}
+
+private fun captureCurrentLocation(context: Context, onResult: (Location?) -> Unit) {
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        onResult(null)
+        return
+    }
+
+    val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        .firstOrNull { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+    if (provider == null) {
+        onResult(null)
+        return
+    }
+
+    try {
+        manager.getCurrentLocation(
+            provider,
+            CancellationSignal(),
+            ContextCompat.getMainExecutor(context),
+            onResult
+        )
+    } catch (_: SecurityException) {
+        onResult(null)
     }
 }

@@ -6,6 +6,20 @@ import se.joynes.nudgealarm.core.config.ReminderConfig
 import kotlin.time.Duration.Companion.minutes
 
 class ReminderEntityTest {
+    @Test
+    fun placeLinkSurvivesConfigRoundTrip() {
+        val entity = ReminderEntity(
+            id = "home_quest",
+            title = "Home quest",
+            schedule = "0 18 * * *",
+            placeId = "home-place"
+        )
+
+        val roundTripped = ReminderEntity.fromReminderConfig(entity.toReminderConfig())
+
+        assertEquals("home-place", roundTripped.placeId)
+    }
+
 
     @Test
     fun createEntityWithAllFields() {

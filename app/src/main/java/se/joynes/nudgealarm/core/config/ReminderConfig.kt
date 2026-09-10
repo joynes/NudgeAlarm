@@ -11,10 +11,14 @@ data class ReminderConfig(
     val nagInterval: Duration = 5.minutes,
     val maxNags: Int = 100,
     val sticky: Boolean = false,
+    val placeId: String? = null,
     val sound: String = "alarm",
     val vibration: String = "strong",
     val snoozeOptions: List<Duration> = listOf(5.minutes, 15.minutes)
 )
+
+val ReminderConfig.hasLocationCondition: Boolean
+    get() = placeId != null
 
 /**
  * Returns the approximate number of days between two consecutive occurrences.

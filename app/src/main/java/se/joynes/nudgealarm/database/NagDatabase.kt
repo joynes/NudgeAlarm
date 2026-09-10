@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [NagStateEntity::class, NagHistoryEntity::class, ReminderEntity::class],
-    version = 5,
+    entities = [NagStateEntity::class, NagHistoryEntity::class, ReminderEntity::class, SavedPlaceEntity::class, SavedPlaceLocationEntity::class],
+    version = 6,
     exportSchema = false
 )
 abstract class NagDatabase : RoomDatabase() {
@@ -17,11 +17,21 @@ abstract class NagDatabase : RoomDatabase() {
     abstract fun nagStateDao(): NagStateDao
     abstract fun nagHistoryDao(): NagHistoryDao
     abstract fun reminderDao(): ReminderDao
+    abstract fun savedPlaceDao(): SavedPlaceDao
 
     companion object {
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE reminders ADD COLUMN sticky INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reminders ADD COLUMN placeId TEXT")
+                db.execSQL("CREATE TABLE IF NOT EXISTS saved_places (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, activeLocationId TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS saved_place_locations (id TEXT NOT NULL PRIMARY KEY, placeId TEXT NOT NULL, label TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, radiusMeters INTEGER NOT NULL, createdAt INTEGER NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_place_locations_placeId ON saved_place_locations(placeId)")
             }
         }
 
@@ -35,7 +45,7 @@ abstract class NagDatabase : RoomDatabase() {
                     NagDatabase::class.java,
                     "nag_database"
                 )
-                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance

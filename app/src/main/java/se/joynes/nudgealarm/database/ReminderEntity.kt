@@ -20,6 +20,7 @@ data class ReminderEntity(
     val maxNags: Int = 100,
     @ColumnInfo(defaultValue = "0")
     val sticky: Boolean = false,
+    val placeId: String? = null,
     val enabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
@@ -31,7 +32,8 @@ data class ReminderEntity(
             schedule = schedule,
             nagInterval = nagIntervalMinutes.minutes,
             maxNags = maxNags,
-            sticky = sticky
+            sticky = sticky,
+            placeId = placeId
         )
     }
 
@@ -43,7 +45,8 @@ data class ReminderEntity(
                 schedule = config.schedule,
                 nagIntervalMinutes = config.nagInterval.inWholeMinutes.toInt(),
                 maxNags = config.maxNags,
-                sticky = config.sticky
+                sticky = config.sticky,
+                placeId = config.placeId
             )
         }
     }
