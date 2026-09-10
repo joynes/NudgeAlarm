@@ -69,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -1112,6 +1113,7 @@ private fun QuestEditDialog(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     FilterChip(
+                        modifier = Modifier.testTag("place-anywhere"),
                         selected = selectedPlaceId == null,
                         onClick = { selectedPlaceId = null },
                         label = { Text("ANYWHERE") },
@@ -1122,6 +1124,7 @@ private fun QuestEditDialog(
                     )
                     savedPlaces.forEach { savedPlace ->
                         FilterChip(
+                            modifier = Modifier.testTag("place-${savedPlace.place.id}"),
                             selected = selectedPlaceId == savedPlace.place.id,
                             onClick = { selectedPlaceId = savedPlace.place.id },
                             label = { Text(savedPlace.place.name) },
@@ -1227,6 +1230,7 @@ private fun QuestEditDialog(
                                 color = if (active) MegadriveGreen else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             TextButton(
+                                modifier = Modifier.testTag("position-${savedLocation.id}"),
                                 onClick = {
                                     onSelectSavedPosition(selectedPlace.place.id, savedLocation.id)
                                 },
@@ -1282,6 +1286,7 @@ private fun QuestEditDialog(
         },
         confirmButton = {
             Button(
+                modifier = Modifier.testTag("quest-save"),
                 onClick = {
                     if (title.isBlank()) return@Button
                     val schedule = when (scheduleMode) {

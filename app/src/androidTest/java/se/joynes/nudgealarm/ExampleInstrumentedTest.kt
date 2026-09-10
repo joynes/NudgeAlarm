@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("se.joynes.nudgealarm", appContext.packageName)
+        assertEquals("se.joynes.nudgealarm.debug", appContext.packageName)
     }
 }
