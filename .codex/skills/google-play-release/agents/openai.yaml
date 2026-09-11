@@ -1,0 +1,4 @@
+interface:
+  display_name: "Google Play Release"
+  short_description: "Build and publish NudgeAlarm updates to Google Play"
+  default_prompt: "Publish the current NudgeAlarm release to Google Play using the project's verified release workflow."
