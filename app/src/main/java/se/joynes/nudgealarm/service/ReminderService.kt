@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.CancellationSignal
 import android.os.IBinder
 import android.os.PowerManager
@@ -219,11 +220,7 @@ class ReminderService : Service() {
         isRunning = true
         eventLog.add(Event.ServiceStarted())
 
-        startForeground(
-            ReminderNotification.SERVICE_NOTIFICATION_ID,
-            ReminderNotification.buildServiceNotification(this),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-        )
+        startReminderForeground(includeLocation = false)
 
         // Resume any active nags from previous run
         resumeActiveNags()
@@ -460,15 +457,27 @@ class ReminderService : Service() {
         if (!providerEnabled) return
 
         try {
-            startForeground(
-                ReminderNotification.SERVICE_NOTIFICATION_ID,
-                ReminderNotification.buildServiceNotification(this),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-            )
+            startReminderForeground(includeLocation = true)
             locationForegroundEnabled = true
         } catch (error: SecurityException) {
             eventLog.add(Event.Debug(detail = "Location foreground mode unavailable: ${error.message}"))
         }
+    }
+
+    private fun startReminderForeground(includeLocation: Boolean) {
+        val foregroundType = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
+                    if (includeLocation) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
+            }
+            includeLocation -> ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            else -> ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE
+        }
+        startForeground(
+            ReminderNotification.SERVICE_NOTIFICATION_ID,
+            ReminderNotification.buildServiceNotification(this),
+            foregroundType
+        )
     }
 
     private suspend fun currentLocation(): Location? {
