@@ -21,10 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -64,13 +67,33 @@ fun PermissionScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showLocationDisclosure by remember { mutableStateOf(false) }
 
-    var permissionStates by remember { mutableStateOf(getPermissionStates(context, onRequestNotificationPermission)) }
+    val openLocationSettings = {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+        }
+        context.startActivity(intent)
+    }
+
+    var permissionStates by remember {
+        mutableStateOf(
+            getPermissionStates(
+                context,
+                onRequestNotificationPermission,
+                onRequestBackgroundLocation = { showLocationDisclosure = true }
+            )
+        )
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                permissionStates = getPermissionStates(context, onRequestNotificationPermission)
+                permissionStates = getPermissionStates(
+                    context,
+                    onRequestNotificationPermission,
+                    onRequestBackgroundLocation = { showLocationDisclosure = true }
+                )
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -123,6 +146,31 @@ fun PermissionScreen(
         ) {
             Text("< BACK TO GAME", color = Color.White)
         }
+    }
+
+    if (showLocationDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showLocationDisclosure = false },
+            title = { Text("BACKGROUND LOCATION") },
+            text = {
+                Text(
+                    "NudgeAlarm accesses your location while the app is closed or not in use " +
+                        "only to decide whether a place-only quest may show its reminder. " +
+                        "Your location stays on this device and is not shared."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLocationDisclosure = false
+                        openLocationSettings()
+                    }
+                ) { Text("CONTINUE TO SETTINGS") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationDisclosure = false }) { Text("NOT NOW") }
+            }
+        )
     }
 }
 
@@ -182,7 +230,15 @@ private fun PermissionCard(permission: PermissionState) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = permission.onRequest,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (permission.name == "Location (optional)") {
+                                Modifier.testTag("backgroundLocationUnlock")
+                            } else {
+                                Modifier
+                            }
+                        ),
                     shape = RoundedCornerShape(4.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MegadrivePurple)
                 ) {
@@ -195,7 +251,8 @@ private fun PermissionCard(permission: PermissionState) {
 
 private fun getPermissionStates(
     context: Context,
-    onRequestNotificationPermission: () -> Unit
+    onRequestNotificationPermission: () -> Unit,
+    onRequestBackgroundLocation: () -> Unit
 ): List<PermissionState> {
     val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
 
@@ -217,17 +274,12 @@ private fun getPermissionStates(
         ),
         PermissionState(
             name = "Location (optional)",
-            description = "Allow all the time for place-only quests",
+            description = "Used in the background only for place-only quests",
             isGranted = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION
             ) == PackageManager.PERMISSION_GRANTED,
-            onRequest = {
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                }
-                context.startActivity(intent)
-            }
+            onRequest = onRequestBackgroundLocation
         ),
         PermissionState(
             name = "App Settings",

@@ -675,6 +675,7 @@ private fun QuestEditDialog(
     var locationStatus by remember { mutableStateOf<String?>(null) }
     var pendingLocationAction by remember { mutableStateOf<((Location) -> Unit)?>(null) }
     var permissionRefresh by remember { mutableStateOf(0) }
+    var showBackgroundLocationDisclosure by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val hasFineLocation = ContextCompat.checkSelfPermission(
@@ -1252,20 +1253,45 @@ private fun QuestEditDialog(
                         color = MegadriveOrange
                     )
                     OutlinedButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(
-                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                    Uri.parse("package:${context.packageName}")
-                                )
-                            )
-                        },
+                        onClick = { showBackgroundLocationDisclosure = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(4.dp),
                         border = BorderStroke(1.dp, MegadriveOrange)
                     ) {
                         Text("OPEN LOCATION SETTINGS", color = MegadriveOrange)
                     }
+                }
+
+                if (showBackgroundLocationDisclosure) {
+                    AlertDialog(
+                        onDismissRequest = { showBackgroundLocationDisclosure = false },
+                        title = { Text("BACKGROUND LOCATION") },
+                        text = {
+                            Text(
+                                "NudgeAlarm accesses your location while the app is closed or not in use " +
+                                    "only to decide whether this place-only quest may show its reminder. " +
+                                    "Your location stays on this device and is not shared."
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showBackgroundLocationDisclosure = false
+                                    context.startActivity(
+                                        Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                    )
+                                }
+                            ) { Text("CONTINUE TO SETTINGS") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showBackgroundLocationDisclosure = false }) {
+                                Text("NOT NOW")
+                            }
+                        }
+                    )
                 }
 
                 // Delete button (only when editing)
