@@ -1484,7 +1484,7 @@ private fun RetroHeader(
                 Icon(
                     imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
                     contentDescription = if (quietMode) "Unmute" else "Mute",
-                    tint = if (quietMode) Color(0xFFFF4444) else Color.Gray,
+                    tint = if (quietMode) Color(0xFFFF4444) else MegadriveGreen,
                     modifier = Modifier.size(22.dp)
                 )
             }
