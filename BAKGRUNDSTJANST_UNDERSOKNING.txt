@@ -1,0 +1,91 @@
+Undersökning: bakgrundstjänster i NudgeAlarm och TerminalHub
+Datum: 2026-09-21
+
+Sammanfattning
+=============
+
+Både NudgeAlarm och TerminalHub använder en Android foreground service för arbete
+som ska fortsätta när appen inte visas. Android kräver att en sådan tjänst har en
+fortlöpande notifikation. NudgeAlarm saknar alltså inte mekanismen, men den är
+mindre tydlig och kan döljas bland tysta notifikationer.
+
+TerminalHub
+===========
+
+TerminalHub visar en egen bekräftelseruta innan användaren aktiverar Background
+SSH. Dialogen berättar att:
+
+- SSH-anslutningar hålls aktiva när andra appar används.
+- En fortlöpande notifikation kommer att visas.
+- Funktionen kan använda mer batteri och mobildata.
+- Funktionen kan stoppas från appen eller notifikationen.
+
+TerminalHub kontrollerar även notifikationsbehörigheten. På Android 13 och senare
+startas inte bakgrundstjänsten om POST_NOTIFICATIONS saknas. Den fortlöpande
+notifikationen heter "TerminalHub SSH active", visar antalet SSH-anslutningar och
+har en Stop-knapp.
+
+Relevanta filer:
+
+- /Users/joka/terminalhub/terminal-hub/terminalhub/app/src/main/java/se/joynes/terminalhub/ui/screen/settings/SettingsScreen.kt
+- /Users/joka/terminalhub/terminal-hub/terminalhub/app/src/main/java/se/joynes/terminalhub/service/BackgroundSshService.kt
+
+NudgeAlarm
+==========
+
+NudgeAlarm startar ReminderService som en foreground service. Tjänsten skapar en
+fortlöpande notifikation med rubriken "NudgeAlarm Active". Texten visar nästa
+påminnelse, antalet aktiva påminnelser eller "Monitoring reminders".
+
+Servicenotifikationen använder kanalen "Background Service" med låg prioritet.
+Den kan därför visas som en tyst eller minimerad notifikation. På vissa telefoner,
+bland annat Samsung, kan den i stället märkas tydligast under Androids vy för
+aktiva appar.
+
+NudgeAlarm visar en varning när notifikationsbehörighet saknas, men startflödet
+stoppar inte själva foreground-tjänsten. Android kan då låta tjänsten köras medan
+den vanliga notifikationen inte syns i notifikationsfältet. Det är den viktigaste
+skillnaden mot TerminalHub.
+
+Relevanta filer:
+
+- app/src/main/java/se/joynes/nudgealarm/service/ReminderService.kt
+- app/src/main/java/se/joynes/nudgealarm/notification/ReminderNotification.kt
+- app/src/main/java/se/joynes/nudgealarm/notification/ChannelSetup.kt
+- app/src/main/java/se/joynes/nudgealarm/ui/MainViewModel.kt
+
+Varför TerminalHub har en extra popup
+======================================
+
+Bekräftelserutan i TerminalHub är en del av appens egen design, inte en popup som
+Android automatiskt kräver. Den finns för att ge ett tydligt och frivilligt val,
+förklara batteri- och dataanvändning och göra bakgrundsfunktionen transparent.
+Detta är även ett bra upplägg ur Google Play-perspektiv.
+
+Androids verkliga krav är den fortlöpande notifikationen så länge foreground-
+tjänsten körs. Det kravet gäller båda apparna.
+
+Slutsats
+========
+
+NudgeAlarm har redan en foreground-service-notifikation, men TerminalHub har ett
+tydligare och säkrare användarflöde. Om "NudgeAlarm Active" inte syns bör följande
+kontrolleras:
+
+1. Att notifikationsbehörighet är beviljad.
+2. Att kanalen "Background Service" inte har stängts av i Android-inställningarna.
+3. Att notifikationen inte ligger bland tysta eller minimerade notifikationer.
+4. Att NudgeAlarm visas under Androids eller Samsungs lista över aktiva appar.
+
+Rekommenderad förbättring för NudgeAlarm
+========================================
+
+- Visa en bekräftelseruta innan påminnelsetjänsten startas första gången.
+- Förklara att en fortlöpande notifikation visas och varför den behövs.
+- Kräv notifikationsbehörighet innan tjänsten markeras som aktiv.
+- Lägg till en tydlig Stop-knapp i servicenotifikationen.
+- Använd en särskild notifikationsikon och tydligare text.
+- Visa ett begripligt felmeddelande om kanalen eller behörigheten är avstängd.
+
+Det skulle göra NudgeAlarm konsekvent med TerminalHub och minska risken att
+användaren tror att påminnelsetjänsten körs när Android inte kan visa dess status.
