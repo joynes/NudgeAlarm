@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,7 +64,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import se.joynes.nudgealarm.notification.ChannelSetup
+import se.joynes.nudgealarm.notification.QuietModeController
 import se.joynes.nudgealarm.storage.SettingsStore
 
 enum class Screen {
@@ -181,7 +182,10 @@ fun NudgeAlarmApp() {
     var hasNotificationPermission by remember { mutableStateOf(checkNotificationPermission(context)) }
 
     val settingsStore = remember { SettingsStore(context) }
-    var quietMode by remember { mutableStateOf(settingsStore.quietMode) }
+    var quietMode by remember {
+        QuietModeController.expireIfNeeded(context)
+        mutableStateOf(settingsStore.quietMode)
+    }
     var showMenuDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingEditReminderId by remember { mutableStateOf<String?>(null) }
@@ -230,16 +234,23 @@ fun NudgeAlarmApp() {
     val bottomBarScreens = setOf(Screen.Main, Screen.EditReminders, Screen.Analytics, Screen.Settings)
     val showBottomBar = currentScreen in bottomBarScreens
 
-    val toggleQuietMode = {
-        val newMode = !quietMode
-        quietMode = newMode
-        settingsStore.quietMode = newMode
-        ChannelSetup.recreateReminderChannel(context)
-        val intent = Intent(context, ReminderService::class.java).apply {
-            action = ReminderService.ACTION_REFRESH_NOTIFICATION
+    LaunchedEffect(quietMode, settingsStore.quietModeUntil) {
+        if (!quietMode) return@LaunchedEffect
+        val until = settingsStore.quietModeUntil
+        if (until <= 0L) return@LaunchedEffect
+        delay((until - System.currentTimeMillis()).coerceAtLeast(0L))
+        QuietModeController.expireIfNeeded(context)
+        quietMode = settingsStore.quietMode
+    }
+
+    val setQuietMode: (Int?) -> Unit = { minutes ->
+        if (minutes == null) {
+            QuietModeController.disable(context)
+            quietMode = false
+        } else {
+            QuietModeController.enableFor(context, minutes)
+            quietMode = true
         }
-        context.startService(intent)
-        Unit
     }
 
     // Import confirmation dialog — shown after user picks a file
@@ -301,7 +312,7 @@ fun NudgeAlarmApp() {
             uiState = uiState,
             hasNotificationPermission = hasNotificationPermission,
             quietMode = quietMode,
-            onToggleQuietMode = toggleQuietMode,
+            onSetQuietMode = setQuietMode,
             onMenuClick = { showMenuDialog = true },
             showMenu = showMenuDialog,
             onMenuDismiss = { showMenuDialog = false },

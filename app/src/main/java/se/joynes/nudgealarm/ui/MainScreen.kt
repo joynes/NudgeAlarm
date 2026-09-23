@@ -99,7 +99,7 @@ fun MainScreen(
     uiState: MainUiState,
     hasNotificationPermission: Boolean,
     quietMode: Boolean,
-    onToggleQuietMode: () -> Unit,
+    onSetQuietMode: (Int?) -> Unit,
     onMenuClick: () -> Unit,
     showMenu: Boolean,
     onMenuDismiss: () -> Unit,
@@ -146,6 +146,7 @@ fun MainScreen(
     var showCompleteRemainingConfirm by remember { mutableStateOf(false) }
     var showSnoozeAllActive by remember { mutableStateOf(false) }
     var showSnoozeAllRemaining by remember { mutableStateOf(false) }
+    var showQuietModeDialog by remember { mutableStateOf(false) }
     var advancedQuest by remember { mutableStateOf<ActiveReminderUi?>(null) }
     var questPendingPermanentDelete by remember { mutableStateOf<ActiveReminderUi?>(null) }
     val clipboardManager = LocalClipboardManager.current
@@ -163,7 +164,9 @@ fun MainScreen(
             isRunning = uiState.isServiceRunning,
             currentGameName = uiState.currentGameName,
             quietMode = quietMode,
-            onToggleQuietMode = onToggleQuietMode,
+            onToggleQuietMode = {
+                if (quietMode) onSetQuietMode(null) else showQuietModeDialog = true
+            },
             onMenuClick = onMenuClick
         )
 
@@ -1344,6 +1347,88 @@ fun MainScreen(
             },
             onDismiss = { showSnoozeAllRemaining = false }
         )
+    }
+
+    if (showQuietModeDialog) {
+        QuietModeDurationDialog(
+            onSelect = { minutes ->
+                onSetQuietMode(minutes)
+                showQuietModeDialog = false
+            },
+            onDismiss = { showQuietModeDialog = false }
+        )
+    }
+}
+
+@Composable
+internal fun QuietModeDurationDialog(
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                text = "QUIET MODE",
+                style = MaterialTheme.typography.titleLarge,
+                color = MegadriveGreen,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Pause notification alerts for:",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(30 to "30M", 60 to "1H", 120 to "2H").forEach { (minutes, label) ->
+                        QuietModeDurationButton(minutes, label, onSelect, Modifier.weight(1f))
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(240 to "4H", 1440 to "24H").forEach { (minutes, label) ->
+                        QuietModeDurationButton(minutes, label, onSelect, Modifier.weight(1f))
+                    }
+                }
+                Text(
+                    text = "Alerts turn on automatically when the timer ends.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MegadriveGreen
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("< CANCEL", color = MegadriveCyan)
+            }
+        }
+    )
+}
+
+@Composable
+private fun QuietModeDurationButton(
+    minutes: Int,
+    label: String,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = { onSelect(minutes) },
+        modifier = modifier,
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(1.dp, MegadriveGreen),
+        contentPadding = PaddingValues(6.dp)
+    ) {
+        Text(label, color = MegadriveGreen, fontWeight = FontWeight.Bold)
     }
 }
 

@@ -109,6 +109,7 @@ class SettingsStore(context: Context) {
         private const val KEY_CUSTOM_SOUND_NAME = "custom_sound_name"
         private const val KEY_CHANNEL_VERSION = "channel_version"
         private const val KEY_QUIET_MODE = "quiet_mode"
+        private const val KEY_QUIET_MODE_UNTIL = "quiet_mode_until"
         private const val KEY_STALE_TASK_THRESHOLD_DAYS = "stale_task_threshold_days"
         private const val KEY_OLD_REMINDER_RETENTION_MINUTES = "old_reminder_retention_minutes"
         private const val KEY_ALERT_ONLY_WHEN_ACTIVE = "alert_only_when_active"
@@ -149,7 +150,24 @@ class SettingsStore(context: Context) {
     /** When true, notifications are delivered silently (no sound, no vibration, no heads-up). */
     var quietMode: Boolean
         get() = prefs.getBoolean(KEY_QUIET_MODE, false)
-        set(value) = prefs.edit().putBoolean(KEY_QUIET_MODE, value).apply()
+        set(value) {
+            prefs.edit()
+                .putBoolean(KEY_QUIET_MODE, value)
+                .remove(KEY_QUIET_MODE_UNTIL)
+                .apply()
+        }
+
+    /** Epoch time when timed quiet mode ends. Zero means no automatic end. */
+    var quietModeUntil: Long
+        get() = prefs.getLong(KEY_QUIET_MODE_UNTIL, 0L)
+        set(value) = prefs.edit().putLong(KEY_QUIET_MODE_UNTIL, value).apply()
+
+    fun enableQuietModeUntil(until: Long) {
+        prefs.edit()
+            .putBoolean(KEY_QUIET_MODE, true)
+            .putLong(KEY_QUIET_MODE_UNTIL, until)
+            .apply()
+    }
 
     /**
      * Tasks that are still ACTIVE from a previous day are auto-expired when the

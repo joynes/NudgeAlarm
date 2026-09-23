@@ -48,6 +48,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".service.QuietModeReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".service.BootReceiver"
             android:exported="true"
             android:enabled="true">

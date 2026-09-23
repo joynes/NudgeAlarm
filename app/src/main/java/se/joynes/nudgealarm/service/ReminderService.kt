@@ -41,6 +41,7 @@ import se.joynes.nudgealarm.database.NagStatus
 import se.joynes.nudgealarm.database.ReminderRepository
 import se.joynes.nudgealarm.database.SavedPlaceRepository
 import se.joynes.nudgealarm.notification.ChannelSetup
+import se.joynes.nudgealarm.notification.QuietModeController
 import se.joynes.nudgealarm.notification.ReminderNotification
 import se.joynes.nudgealarm.storage.ConfigLoader
 import se.joynes.nudgealarm.storage.EventLogStore
@@ -101,6 +102,7 @@ class ReminderService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var schedulerJob: Job? = null
+    private var quietModeJob: Job? = null
 
     private lateinit var eventLog: EventLogStore
     private lateinit var configLoader: ConfigLoader
@@ -126,6 +128,7 @@ class ReminderService : Service() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         settingsStore = se.joynes.nudgealarm.storage.SettingsStore(this)
+        QuietModeController.expireIfNeeded(this)
 
         // Initialize database and repositories
         val database = NagDatabase.getInstance(this)
@@ -192,6 +195,7 @@ class ReminderService : Service() {
                 if (ruleIds != null) handleCancelAll(ruleIds.toList())
             }
             ACTION_REFRESH_NOTIFICATION -> {
+                scheduleQuietModeExpiry()
                 serviceScope.launch { refreshCombinedNotification(silent = true) }
             }
             else -> {
@@ -221,11 +225,27 @@ class ReminderService : Service() {
         eventLog.add(Event.ServiceStarted())
 
         startReminderForeground(includeLocation = false)
+        scheduleQuietModeExpiry()
 
         // Resume any active nags from previous run
         resumeActiveNags()
 
         loadConfigAndStart()
+    }
+
+    private fun scheduleQuietModeExpiry() {
+        quietModeJob?.cancel()
+        if (!settingsStore.quietMode) return
+        val until = settingsStore.quietModeUntil
+        if (until <= 0L) return
+
+        quietModeJob = serviceScope.launch {
+            delay((until - System.currentTimeMillis()).coerceAtLeast(0L))
+            if (settingsStore.quietMode && settingsStore.quietModeUntil == until) {
+                QuietModeController.disable(this@ReminderService, refreshService = false)
+                refreshCombinedNotification(silent = true)
+            }
+        }
     }
 
     private fun resumeActiveNags() {
