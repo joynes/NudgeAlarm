@@ -71,7 +71,8 @@ class ReminderRepository(private val dao: ReminderDao) {
             nagIntervalMinutes = nagIntervalMinutes,
             maxNags = maxNags,
             sticky = sticky,
-            placeId = placeId
+            placeId = placeId,
+            sortOrder = dao.getMaxSortOrder() + 1
         )
         dao.insert(reminder)
         return reminder
@@ -98,6 +99,21 @@ class ReminderRepository(private val dao: ReminderDao) {
         dao.toggleEnabled(id)
     }
 
+    suspend fun move(id: String, offset: Int) {
+        if (offset == 0) return
+        val reminders = dao.getAll()
+        val from = reminders.indexOfFirst { it.id == id }
+        if (from == -1) return
+        val to = (from + offset).coerceIn(reminders.indices)
+        if (from == to) return
+
+        val first = reminders[from]
+        val second = reminders[to]
+        val now = System.currentTimeMillis()
+        dao.setSortOrder(first.id, second.sortOrder, now)
+        dao.setSortOrder(second.id, first.sortOrder, now)
+    }
+
     /**
      * Set enabled status directly.
      */
@@ -109,7 +125,9 @@ class ReminderRepository(private val dao: ReminderDao) {
      * Import reminders from ReminderConfig list (from YAML).
      */
     suspend fun importFromConfigs(configs: List<ReminderConfig>) {
-        val entities = configs.map { ReminderEntity.fromReminderConfig(it) }
+        val entities = configs.mapIndexed { index, config ->
+            ReminderEntity.fromReminderConfig(config).copy(sortOrder = index)
+        }
         dao.insertAll(entities)
     }
 

@@ -14,19 +14,19 @@ interface ReminderDao {
     /**
      * Get all reminders as a Flow for reactive updates.
      */
-    @Query("SELECT * FROM reminders ORDER BY title ASC")
+    @Query("SELECT * FROM reminders ORDER BY sortOrder ASC, createdAt ASC")
     fun getAllFlow(): Flow<List<ReminderEntity>>
 
     /**
      * Get all reminders (one-time read).
      */
-    @Query("SELECT * FROM reminders ORDER BY title ASC")
+    @Query("SELECT * FROM reminders ORDER BY sortOrder ASC, createdAt ASC")
     suspend fun getAll(): List<ReminderEntity>
 
     /**
      * Get only enabled reminders.
      */
-    @Query("SELECT * FROM reminders WHERE enabled = 1 ORDER BY title ASC")
+    @Query("SELECT * FROM reminders WHERE enabled = 1 ORDER BY sortOrder ASC, createdAt ASC")
     suspend fun getEnabled(): List<ReminderEntity>
 
     /**
@@ -70,6 +70,12 @@ interface ReminderDao {
      */
     @Query("SELECT COUNT(*) FROM reminders")
     suspend fun getCount(): Int
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM reminders")
+    suspend fun getMaxSortOrder(): Int
+
+    @Query("UPDATE reminders SET sortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setSortOrder(id: String, sortOrder: Int, updatedAt: Long = System.currentTimeMillis())
 
     /**
      * Toggle enabled status.

@@ -22,6 +22,8 @@ data class ReminderEntity(
     val sticky: Boolean = false,
     val placeId: String? = null,
     val enabled: Boolean = true,
+    @ColumnInfo(defaultValue = "0")
+    val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) {
@@ -33,7 +35,8 @@ data class ReminderEntity(
             nagInterval = nagIntervalMinutes.minutes,
             maxNags = maxNags,
             sticky = sticky,
-            placeId = placeId
+            placeId = placeId,
+            enabled = enabled
         )
     }
 
@@ -46,7 +49,8 @@ data class ReminderEntity(
                 nagIntervalMinutes = config.nagInterval.inWholeMinutes.toInt(),
                 maxNags = config.maxNags,
                 sticky = config.sticky,
-                placeId = config.placeId
+                placeId = config.placeId,
+                enabled = config.enabled
             )
         }
     }

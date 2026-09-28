@@ -12,6 +12,7 @@ data class ReminderConfig(
     val maxNags: Int = 100,
     val sticky: Boolean = false,
     val placeId: String? = null,
+    val enabled: Boolean = true,
     val sound: String = "alarm",
     val vibration: String = "strong",
     val snoozeOptions: List<Duration> = listOf(5.minutes, 15.minutes)

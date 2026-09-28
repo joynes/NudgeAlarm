@@ -30,18 +30,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -103,6 +107,8 @@ fun EditRemindersScreen(
     onEdit: (ReminderEntity) -> Unit,
     onDelete: (String) -> Unit,
     onToggleEnabled: (String) -> Unit,
+    onMove: (String, Int) -> Unit = { _, _ -> },
+    onExportSelected: (Set<String>) -> Unit = {},
     onSave: (title: String, schedule: String, nagIntervalMinutes: Int, maxNags: Int, sticky: Boolean, placeId: String?) -> Unit,
     onCreateSavedPlace: (name: String, latitude: Double, longitude: Double, radiusMeters: Int) -> Unit,
     onAddSavedPosition: (placeId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) -> Unit,
@@ -117,8 +123,10 @@ fun EditRemindersScreen(
     var searchQuery by remember { mutableStateOf("") }
     // -1 = all, -2 = weekdays (1-5), -3 = weekends (0,6), 0-6 = specific day
     var dayFilter by remember { mutableStateOf(-1) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    // Filter reminders based on search query and day filter, then sort by time
+    // Filter reminders while preserving the user's saved manual order.
     val filteredReminders = remember(uiState.reminders, searchQuery, dayFilter) {
         uiState.reminders
             .filter { reminder ->
@@ -190,20 +198,45 @@ fun EditRemindersScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(
-                        onClick = onLoadFromFile,
+                        onClick = {
+                            selectionMode = !selectionMode
+                            if (!selectionMode) selectedIds = emptySet()
+                        },
+                        enabled = uiState.reminders.isNotEmpty(),
                         shape = RoundedCornerShape(4.dp),
-                        border = BorderStroke(1.dp, MegadriveCyan),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        border = BorderStroke(1.dp, MegadriveGold),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("LOAD", fontSize = 11.sp, color = MegadriveCyan)
+                        Text(if (selectionMode) "CANCEL" else "SELECT", fontSize = 11.sp, color = MegadriveGold)
                     }
-                    OutlinedButton(
-                        onClick = onSaveToFile,
-                        shape = RoundedCornerShape(4.dp),
-                        border = BorderStroke(1.dp, MegadrivePurple),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text("SAVE", fontSize = 11.sp, color = MegadrivePurple)
+                    if (selectionMode) {
+                        OutlinedButton(
+                            onClick = { onExportSelected(selectedIds) },
+                            enabled = selectedIds.isNotEmpty(),
+                            shape = RoundedCornerShape(4.dp),
+                            border = BorderStroke(1.dp, MegadrivePurple),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("EXPORT ${selectedIds.size}", fontSize = 11.sp, color = MegadrivePurple)
+                        }
+                    }
+                    if (!selectionMode) {
+                        OutlinedButton(
+                            onClick = onLoadFromFile,
+                            shape = RoundedCornerShape(4.dp),
+                            border = BorderStroke(1.dp, MegadriveCyan),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text("LOAD", fontSize = 11.sp, color = MegadriveCyan)
+                        }
+                        OutlinedButton(
+                            onClick = onSaveToFile,
+                            shape = RoundedCornerShape(4.dp),
+                            border = BorderStroke(1.dp, MegadrivePurple),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text("SAVE", fontSize = 11.sp, color = MegadrivePurple)
+                        }
                     }
                 }
             }
@@ -345,11 +378,20 @@ fun EditRemindersScreen(
             } else {
                 // === COMPACT LIST ===
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(filteredReminders) { reminder ->
+                    itemsIndexed(filteredReminders, key = { _, reminder -> reminder.id }) { index, reminder ->
                         CompactQuestRow(
                             reminder = reminder,
+                            selectionMode = selectionMode,
+                            selected = reminder.id in selectedIds,
+                            canMoveUp = searchQuery.isBlank() && dayFilter == -1 && index > 0,
+                            canMoveDown = searchQuery.isBlank() && dayFilter == -1 && index < filteredReminders.lastIndex,
+                            onSelectionChange = { selected ->
+                                selectedIds = if (selected) selectedIds + reminder.id else selectedIds - reminder.id
+                            },
                             onEdit = { onEdit(reminder) },
-                            onToggleEnabled = { onToggleEnabled(reminder.id) }
+                            onToggleEnabled = { onToggleEnabled(reminder.id) },
+                            onMoveUp = { onMove(reminder.id, -1) },
+                            onMoveDown = { onMove(reminder.id, 1) }
                         )
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
@@ -501,8 +543,15 @@ private fun frequencyColor(schedule: String): Color {
 @Composable
 private fun CompactQuestRow(
     reminder: ReminderEntity,
+    selectionMode: Boolean,
+    selected: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onSelectionChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
-    onToggleEnabled: () -> Unit
+    onToggleEnabled: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
 ) {
     val readableSchedule = remember(reminder.schedule) { cronToReadable(reminder.schedule) }
     val accentColor = remember(reminder.schedule) { frequencyColor(reminder.schedule) }
@@ -510,20 +559,27 @@ private fun CompactQuestRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onEdit() }
+            .clickable { if (selectionMode) onSelectionChange(!selected) else onEdit() }
             .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Status indicator
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(
-                    color = if (!reminder.enabled) Color.Gray else accentColor,
-                    shape = RoundedCornerShape(4.dp)
-                )
-        )
+        if (selectionMode) {
+            Checkbox(
+                checked = selected,
+                onCheckedChange = onSelectionChange,
+                modifier = Modifier.testTag("select_${reminder.id}")
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        color = if (!reminder.enabled) Color.Gray else accentColor,
+                        shape = RoundedCornerShape(4.dp)
+                    )
+            )
+        }
 
         Spacer(modifier = Modifier.width(10.dp))
 
@@ -547,18 +603,28 @@ private fun CompactQuestRow(
             )
         }
 
-        // Toggle switch
-        Switch(
-            checked = reminder.enabled,
-            onCheckedChange = { onToggleEnabled() },
-            modifier = Modifier.size(44.dp, 24.dp),
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MegadriveGreen,
-                checkedTrackColor = MegadriveGreen.copy(alpha = 0.5f),
-                uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+        if (!selectionMode) {
+            IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ArrowUpward, contentDescription = "Move ${reminder.title} up", modifier = Modifier.size(18.dp))
+            }
+            IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ArrowDownward, contentDescription = "Move ${reminder.title} down", modifier = Modifier.size(18.dp))
+            }
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Edit, contentDescription = "Edit ${reminder.title}", tint = MegadriveCyan, modifier = Modifier.size(18.dp))
+            }
+            Switch(
+                checked = reminder.enabled,
+                onCheckedChange = { onToggleEnabled() },
+                modifier = Modifier.size(44.dp, 24.dp),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MegadriveGreen,
+                    checkedTrackColor = MegadriveGreen.copy(alpha = 0.5f),
+                    uncheckedThumbColor = Color.Gray,
+                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                )
             )
-        )
+        }
     }
 }
 

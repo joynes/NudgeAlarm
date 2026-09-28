@@ -48,6 +48,29 @@ class ReminderRepositoryTest {
         assertEquals(2, repository.getAllReminders().size)
     }
 
+    @Test
+    fun moveChangesPersistedManualOrder() = runTest {
+        val first = repository.create("First", "0 8 * * *")
+        val second = repository.create("Second", "0 9 * * *")
+        val third = repository.create("Third", "0 10 * * *")
+
+        repository.move(third.id, -1)
+        repository.move(third.id, -1)
+
+        assertEquals(listOf(third.id, first.id, second.id), repository.getAllReminders().map { it.id })
+    }
+
+    @Test
+    fun moveAtBoundaryDoesNothing() = runTest {
+        val first = repository.create("First", "0 8 * * *")
+        val second = repository.create("Second", "0 9 * * *")
+
+        repository.move(first.id, -1)
+        repository.move(second.id, 1)
+
+        assertEquals(listOf(first.id, second.id), repository.getAllReminders().map { it.id })
+    }
+
     // ── getAllRemindersFlow ────────────────────────────────────────────────────
 
     @Test

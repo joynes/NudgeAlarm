@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [NagStateEntity::class, NagHistoryEntity::class, ReminderEntity::class, SavedPlaceEntity::class, SavedPlaceLocationEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class NagDatabase : RoomDatabase() {
@@ -35,6 +35,13 @@ abstract class NagDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reminders ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE reminders SET sortOrder = rowid - 1")
+            }
+        }
+
         @Volatile
         private var INSTANCE: NagDatabase? = null
 
@@ -45,7 +52,7 @@ abstract class NagDatabase : RoomDatabase() {
                     NagDatabase::class.java,
                     "nag_database"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance

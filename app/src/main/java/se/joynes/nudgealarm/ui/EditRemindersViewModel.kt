@@ -1,6 +1,7 @@
 package se.joynes.nudgealarm.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ import se.joynes.nudgealarm.database.ReminderEntity
 import se.joynes.nudgealarm.database.ReminderRepository
 import se.joynes.nudgealarm.database.SavedPlaceRepository
 import se.joynes.nudgealarm.database.SavedPlaceWithLocations
+import se.joynes.nudgealarm.storage.QuestYamlExporter
 
 data class EditRemindersUiState(
     val reminders: List<ReminderEntity> = emptyList(),
@@ -160,6 +162,32 @@ class EditRemindersViewModel(application: Application) : AndroidViewModel(applic
                 reminderRepository.toggleEnabled(id)
             }
             loadReminders()
+        }
+    }
+
+    fun moveReminder(id: String, offset: Int) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                reminderRepository.move(id, offset)
+            }
+            loadReminders()
+        }
+    }
+
+    fun exportSelected(uri: Uri, selectedIds: Set<String>, name: String, onComplete: (Result<Int>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val selected = reminderRepository.getAllReminders().filter { it.id in selectedIds }
+                    require(selected.isNotEmpty()) { "Select at least one quest" }
+                    val yaml = QuestYamlExporter.export(selected, name)
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(yaml.toByteArray())
+                    } ?: error("Could not open export file")
+                    selected.size
+                }
+            }
+            onComplete(result)
         }
     }
 

@@ -513,6 +513,19 @@ fun NudgeAlarmApp() {
         Screen.EditReminders -> {
             val editRemindersViewModel: EditRemindersViewModel = viewModel()
             val editRemindersState by editRemindersViewModel.uiState.collectAsState()
+            var pendingSelectedExport by remember { mutableStateOf<Set<String>>(emptySet()) }
+            val selectedQuestExporter = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("application/x-yaml")
+            ) { uri ->
+                uri?.let {
+                    editRemindersViewModel.exportSelected(
+                        uri = it,
+                        selectedIds = pendingSelectedExport,
+                        name = uiState.currentGameName ?: "Selected quests"
+                    )
+                }
+                pendingSelectedExport = emptySet()
+            }
 
             // Refresh data every time this screen is shown
             LaunchedEffect(Unit) {
@@ -532,6 +545,13 @@ fun NudgeAlarmApp() {
                 onEdit = { reminder -> editRemindersViewModel.startEdit(reminder) },
                 onDelete = { id -> editRemindersViewModel.deleteReminder(id) },
                 onToggleEnabled = { id -> editRemindersViewModel.toggleEnabled(id) },
+                onMove = { id, offset -> editRemindersViewModel.moveReminder(id, offset) },
+                onExportSelected = { ids ->
+                    pendingSelectedExport = ids
+                    val gameName = uiState.currentGameName ?: "NudgeAlarm"
+                    val safeName = gameName.replace(Regex("[^a-zA-Z0-9_åäöÅÄÖ ]"), "_").replace(" ", "_")
+                    selectedQuestExporter.launch("${safeName}_selected_quests.yaml")
+                },
                 onSave = { title, schedule, nagInterval, maxNags, sticky, placeId ->
                     editRemindersViewModel.saveReminder(title, schedule, nagInterval, maxNags, sticky, placeId)
                 },
