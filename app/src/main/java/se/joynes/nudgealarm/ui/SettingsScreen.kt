@@ -63,6 +63,11 @@ fun SettingsScreen(
     onSetOldReminderRetentionMinutes: (Int) -> Unit,
     onToggleAlertOnlyWhenActive: (Boolean) -> Unit,
     onSetMinAlertIntervalMinutes: (Int) -> Unit,
+    onRenamePlace: (String, String) -> Unit,
+    onUpdatePosition: (String, String, String, Double, Double, Int) -> Unit,
+    onSelectPosition: (String, String) -> Unit,
+    onDeletePosition: (String, String) -> Unit,
+    onDeletePlace: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -95,6 +100,17 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SavedPlacesSettingsSection(
+                places = uiState.savedPlaces,
+                linkedReminderCounts = uiState.linkedReminderCounts,
+                error = uiState.placeError,
+                onRenamePlace = onRenamePlace,
+                onUpdatePosition = onUpdatePosition,
+                onSelectPosition = onSelectPosition,
+                onDeletePosition = onDeletePosition,
+                onDeletePlace = onDeletePlace
+            )
+
             // === SOUND SETTINGS - Audio Configuration ===
             Card(
                 modifier = Modifier

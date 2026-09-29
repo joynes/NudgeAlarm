@@ -486,6 +486,7 @@ fun NudgeAlarmApp() {
         Screen.Settings -> {
             val settingsViewModel: SettingsViewModel = viewModel()
             val settingsState by settingsViewModel.uiState.collectAsState()
+            LaunchedEffect(Unit) { settingsViewModel.refreshPlaces() }
             SettingsScreen(
                 uiState = settingsState,
                 onSelectAlarmSound = { sound -> settingsViewModel.setAlarmSound(sound) },
@@ -501,6 +502,13 @@ fun NudgeAlarmApp() {
                 onSetOldReminderRetentionMinutes = { minutes -> settingsViewModel.setOldReminderRetentionMinutes(minutes) },
                 onToggleAlertOnlyWhenActive = { enabled -> settingsViewModel.setAlertOnlyWhenActive(enabled) },
                 onSetMinAlertIntervalMinutes = { minutes -> settingsViewModel.setMinAlertIntervalMinutes(minutes) },
+                onRenamePlace = { id, name -> settingsViewModel.renamePlace(id, name) },
+                onUpdatePosition = { placeId, id, label, latitude, longitude, radius ->
+                    settingsViewModel.updatePosition(placeId, id, label, latitude, longitude, radius)
+                },
+                onSelectPosition = { placeId, id -> settingsViewModel.selectPosition(placeId, id) },
+                onDeletePosition = { placeId, id -> settingsViewModel.deletePosition(placeId, id) },
+                onDeletePlace = { id -> settingsViewModel.deletePlace(id) },
                 onBack = {
                     settingsViewModel.stopPreview()
                     eventLog.add(Event.NavigatedTo(screen = "Main (from Settings)"))
