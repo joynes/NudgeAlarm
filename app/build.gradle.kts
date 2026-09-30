@@ -21,8 +21,8 @@ android {
         applicationId = "se.joynes.nudgealarm"
         minSdk = 31
         targetSdk = 36
-        versionCode = 148
-        versionName = "1.148"
+        versionCode = 149
+        versionName = "1.149"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
