@@ -1,8 +1,8 @@
 <div align="center">
   <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="120" alt="NudgeAlarm app icon">
   <h1>NudgeAlarm</h1>
-  <p><strong>Stop swiping. Start finishing.</strong></p>
-  <p>Persistent, place-aware reminders that keep nudging until the task is done.</p>
+  <p><strong>The free nagging reminder for tasks you cannot afford to forget.</strong></p>
+  <p>Get nudged again and again until you complete, snooze or mute the task.</p>
 
   <p>
     <a href="https://play.google.com/store/apps/details?id=se.joynes.nudgealarm"><img alt="Get NudgeAlarm on Google Play" src="https://img.shields.io/badge/GET_IT_ON-Google_Play-00d084?style=for-the-badge&logo=googleplay&logoColor=white"></a>
@@ -16,7 +16,7 @@
   </p>
 </div>
 
-NudgeAlarm is an Android reminder app for tasks that are too important for a single notification. Turn routines into quests, choose how persistently they should return, snooze when life gets in the way, and complete them when they are actually done.
+NudgeAlarm is an Android nagging reminder app for tasks that are too important for a single notification. Its main job is simple: keep reminding you at the interval you choose instead of assuming that one easily dismissed notification was enough. Turn routines into quests, snooze when life gets in the way, mute them when you need quiet, and complete them when they are actually done.
 
 It is completely free, contains no ads or tracking services, and stores your reminders and history locally on your phone.
 
@@ -43,9 +43,11 @@ Ordinary reminders are easy to dismiss before the job is done. NudgeAlarm separa
 3. You complete it, snooze it, or abandon that attempt.
 4. Local statistics show which routines are working over time.
 
+The scheduler checks for due quests about every five minutes. A reminder can therefore arrive a few minutes after its scheduled time rather than exactly on the minute. Android may also delay or stop background work depending on the device and its battery settings, so exact-time delivery cannot be guaranteed.
+
 ## Highlights
 
-- **Persistent quests** — choose the repeat interval and maximum number of nudges.
+- **Persistent nagging** — repeat reminders as often as every five minutes and choose the maximum number of nudges.
 - **Useful snoozing** — postpone one quest or several active quests at once.
 - **Quiet Mode** — temporarily silence alarms without destroying schedules.
 - **Place-aware reminders** — optionally show a quest only near a saved place such as Home.
@@ -91,7 +93,7 @@ Read the complete [privacy policy](PRIVACY_POLICY.md).
 
 The easiest option is to [install NudgeAlarm from Google Play](https://play.google.com/store/apps/details?id=se.joynes.nudgealarm). NudgeAlarm requires Android 12 or later.
 
-Notification permission is required to deliver reminders. Location permission is required only when you enable a place-aware quest.
+Notification permission is required to deliver reminders. For the most reliable nagging, keep the persistent **NudgeAlarm Active** notification enabled and set NudgeAlarm to **Unrestricted battery use** (or disable battery optimization for it) in Android. The app shows these recommended settings during setup. Location permission is required only when you enable a place-aware quest.
 
 ## Build from source
 

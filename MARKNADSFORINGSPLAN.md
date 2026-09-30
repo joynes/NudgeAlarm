@@ -6,17 +6,21 @@ Planen ska hjälpa NudgeAlarm att hitta sina första återkommande användare, l
 
 ## Positionering
 
-**Kort löfte:** NudgeAlarm är påminnelseappen som fortsätter puffa tills uppgiften faktiskt är klar.
+**Kort löfte:** NudgeAlarm är den kostnadsfria nagging-appen som kan påminna igen och igen tills du gör, snoozar eller tystar uppgiften.
+
+**Huvudanvändning:** Nagging är produkten. Platsstyrning, quest-tema, statistik, filter, mallar och AI-vänlig YAML är funktioner som gör nagging mer relevant och lättare att hantera, men de ska inte skymma huvudnyttan i rubriker och inledningar.
 
 **Skillnad mot vanliga påminnelseappar:**
 
-- Ihärdiga påminnelser som inte försvinner efter en enda notis.
+- Ihärdiga påminnelser, ned till femminutersintervall, som inte ger upp efter en enda notis.
 - Uppgifter presenteras som quests, med en tydlig retro- och spelkänsla.
 - Flexibla intervall och snooze-alternativ.
 - Historik och statistik som visar vad användaren faktiskt slutför.
 - Data lagras lokalt på telefonen och delas inte med tredje part.
 
 Undvik medicinska löften och formuleringar som antyder att appen behandlar ADHD eller andra diagnoser. Beskriv i stället konkreta beteenden och funktioner.
+
+Var också tydlig med teknikens begränsningar: schemaläggaren kontrollerar ungefär var femte minut, så ett alarm kan komma några minuter efter den valda tiden. Android kan fördröja eller stoppa bakgrundsarbete, och exakt leveranstid kan därför inte garanteras. Rekommendera notisbehörighet, en synlig "NudgeAlarm Active"-notis och obegränsad batterianvändning/avstängd batterioptimering för bästa funktion. Placera detta som saklig information, inte som huvudrubrik.
 
 ## Prioriterade målgrupper
 
@@ -30,6 +34,7 @@ Undvik medicinska löften och formuleringar som antyder att appen behandlar ADHD
 Testa följande vinklar var för sig så att det går att se vilken som driver flest installationer och aktiva användare:
 
 - **Problemet:** "Vanliga påminnelser är för lätta att svepa bort."
+- **Huvudfunktionen:** "Behöver du mer än en notis? NudgeAlarm fortsätter tjata."
 - **Resultatet:** "Få vardagsuppgiften gjord – inte bara påmind."
 - **Konceptet:** "Förvandla rutiner till quests."
 - **Integriteten:** "Dina påminnelser stannar på din telefon."
@@ -54,7 +59,8 @@ Ett rimligt första produktmål är att minst hälften av nya användare skapar 
 
 ### Butikssida
 
-- Skriv en kort beskrivning som börjar med användarproblemet och det korta löftet.
+- Skriv en kort beskrivning som börjar med användarproblemet och löftet om återkommande nagging. Nämn övriga funktioner efter huvudnyttan.
+- Lägg in en tydlig timingnotis: kontroll ungefär var femte minut, ingen garanti för exakt minut och rekommenderade Android-inställningar för pålitligt bakgrundsarbete.
 - Skapa fem till åtta skärmbilder som visar: aktiv quest, återkommande påminnelse, snooze, quest-lista, statistik och integritetsbudskap.
 - Gör en kort demovideo på 15–25 sekunder: skapa quest, få påminnelse, snooza och markera klar.
 - Säkerställ att ikon, appnamn, beskrivning och skärmbilder har samma retroinspirerade uttryck.
