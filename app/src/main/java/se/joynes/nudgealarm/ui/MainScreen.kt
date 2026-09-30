@@ -1325,9 +1325,9 @@ fun MainScreen(
 
     // === SNOOZE ALL ACTIVE ===
     if (showSnoozeAllActive) {
-        SnoozeAllDialog(
+        SnoozePickerDialog(
             title = "SNOOZE ALL ACTIVE",
-            count = uiState.activeReminders.size,
+            description = "When should all ${uiState.activeReminders.size} quests nag again?",
             onSnooze = { minutes ->
                 uiState.activeReminders.forEach { onSnooze(it.ruleId, minutes) }
                 showSnoozeAllActive = false
@@ -1338,9 +1338,9 @@ fun MainScreen(
 
     // === SNOOZE ALL REMAINING ===
     if (showSnoozeAllRemaining) {
-        SnoozeAllDialog(
+        SnoozePickerDialog(
             title = "SNOOZE ALL",
-            count = uiState.todaysSchedule.size,
+            description = "When should all ${uiState.todaysSchedule.size} quests nag again?",
             onSnooze = { minutes ->
                 uiState.todaysSchedule.forEach { onSnooze(it.ruleId, minutes) }
                 showSnoozeAllRemaining = false
@@ -1430,73 +1430,6 @@ private fun QuietModeDurationButton(
     ) {
         Text(label, color = MegadriveGreen, fontWeight = FontWeight.Bold)
     }
-}
-
-@Composable
-private fun SnoozeAllDialog(
-    title: String,
-    count: Int,
-    onSnooze: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = MegadriveCyan,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Snooze all $count quests for:",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    listOf(15 to "15M", 60 to "1H", 180 to "3H").forEach { (minutes, label) ->
-                        OutlinedButton(
-                            onClick = { onSnooze(minutes) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, MegadriveCyan),
-                            contentPadding = PaddingValues(4.dp)
-                        ) {
-                            Text(label, fontSize = 14.sp, color = MegadriveCyan)
-                        }
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    listOf(360 to "6H", 720 to "12H", 1200 to "20H").forEach { (minutes, label) ->
-                        OutlinedButton(
-                            onClick = { onSnooze(minutes) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, MegadriveCyan),
-                            contentPadding = PaddingValues(4.dp)
-                        ) {
-                            Text(label, fontSize = 14.sp, color = MegadriveCyan)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("< CANCEL", color = MegadriveCyan)
-            }
-        }
-    )
 }
 
 @Composable
@@ -1686,6 +1619,7 @@ private fun ActiveQuestCard(
     onCancel: () -> Unit,
     onLongPress: () -> Unit
 ) {
+    var showSnoozePicker by remember { mutableStateOf(false) }
     val wasSnoozed = reminder.snoozeCount > 0
     val borderColor = if (wasSnoozed) MegadrivePurple else MegadriveOrange
 
@@ -1771,23 +1705,26 @@ private fun ActiveQuestCard(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Snooze buttons with press feedback
-            Row(
+            FeedbackOutlinedButton(
+                onClick = { showSnoozePicker = true },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                color = MegadriveCyan,
+                contentPadding = PaddingValues(4.dp)
             ) {
-                listOf(15 to "15M", 60 to "1H", 180 to "3H", 1200 to "20H").forEach { (minutes, label) ->
-                    FeedbackOutlinedButton(
-                        onClick = { onSnooze(minutes) },
-                        modifier = Modifier.weight(1f),
-                        color = MegadriveCyan,
-                        contentPadding = PaddingValues(2.dp)
-                    ) {
-                        Text(label, fontSize = 10.sp)
-                    }
-                }
+                Text("SNOOZE · CHOOSE WHEN", fontSize = 12.sp)
             }
         }
+    }
+    if (showSnoozePicker) {
+        SnoozePickerDialog(
+            title = "SNOOZE QUEST",
+            description = "When should ${reminder.title} nag again?",
+            onSnooze = { minutes ->
+                showSnoozePicker = false
+                onSnooze(minutes)
+            },
+            onDismiss = { showSnoozePicker = false }
+        )
     }
 }
 
@@ -1799,6 +1736,7 @@ private fun ScheduledQuestRow(
     onCancel: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showSnoozePicker by remember { mutableStateOf(false) }
     val accentColor = remember(scheduled.schedule) { questFrequencyColor(scheduled.schedule) }
     val readableSchedule = remember(scheduled.schedule) { questScheduleReadable(scheduled.schedule) }
 
@@ -1896,58 +1834,15 @@ private fun ScheduledQuestRow(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = "SNOOZE",
-                        style = MaterialTheme.typography.labelMedium,
+                    FeedbackOutlinedButton(
+                        text = "SNOOZE · CHOOSE WHEN",
+                        onClick = {
+                            showMenu = false
+                            showSnoozePicker = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
                         color = MegadriveCyan
                     )
-
-                    // Snooze options
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        listOf(
-                            15 to "15M",
-                            60 to "1H",
-                            180 to "3H"
-                        ).forEach { (minutes, label) ->
-                            FeedbackOutlinedButton(
-                                onClick = {
-                                    showMenu = false
-                                    onSnooze(minutes)
-                                },
-                                modifier = Modifier.weight(1f),
-                                color = MegadriveCyan,
-                                contentPadding = PaddingValues(4.dp)
-                            ) {
-                                Text(label, fontSize = 12.sp)
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        listOf(
-                            360 to "6H",
-                            720 to "12H",
-                            1200 to "20H"
-                        ).forEach { (minutes, label) ->
-                            FeedbackOutlinedButton(
-                                onClick = {
-                                    showMenu = false
-                                    onSnooze(minutes)
-                                },
-                                modifier = Modifier.weight(1f),
-                                color = MegadriveCyan,
-                                contentPadding = PaddingValues(4.dp)
-                            ) {
-                                Text(label, fontSize = 12.sp)
-                            }
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -1970,6 +1865,17 @@ private fun ScheduledQuestRow(
                     Text("< BACK", color = MegadriveCyan)
                 }
             }
+        )
+    }
+    if (showSnoozePicker) {
+        SnoozePickerDialog(
+            title = "SNOOZE QUEST",
+            description = "When should ${scheduled.title} nag again?",
+            onSnooze = { minutes ->
+                showSnoozePicker = false
+                onSnooze(minutes)
+            },
+            onDismiss = { showSnoozePicker = false }
         )
     }
 }
