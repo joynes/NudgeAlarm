@@ -36,16 +36,17 @@ export ANDROID_SERIAL="emulator-5554"
 The debug build uses the separate package `se.joynes.nudgealarm.debug`, so running
 UI tests does not replace the installed release app.
 
-## Build Release APK
+## Build Release APK and Play App Bundle
 
 ```bash
-./gradlew assembleRelease
+./gradlew assembleRelease bundleRelease
 ```
 
-The signed release APK is generated at:
+The signed release artifacts are generated at:
 
 ```text
 app/build/outputs/apk/release/app-release.apk
+app/build/outputs/bundle/release/app-release.aab
 ```
 
 ## Upload
@@ -59,3 +60,10 @@ The uploaded APK is always named:
 ```text
 latest.apk
 ```
+
+## Google Play
+
+Follow `.codex/skills/google-play-release/SKILL.md` to upload the AAB to the
+existing production and internal testing tracks. Confirm the intended version
+code, review release status, and verify both tracks after submission. The APK
+upload to Drive does not publish the app on Google Play.
