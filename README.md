@@ -6,6 +6,7 @@
 
   <p>
     <a href="https://play.google.com/store/apps/details?id=se.joynes.nudgealarm"><img alt="Get NudgeAlarm on Google Play" src="https://img.shields.io/badge/GET_IT_ON-Google_Play-00d084?style=for-the-badge&logo=googleplay&logoColor=white"></a>
+    <a href="https://joynes.github.io/NudgeAlarm/"><img alt="Open NudgeAlarm website" src="https://img.shields.io/badge/OPEN-WEBSITE-00e5ff?style=for-the-badge&logo=github&logoColor=black"></a>
   </p>
 
   <p>
@@ -23,7 +24,7 @@ It is completely free, contains no ads or tracking services, and stores your rem
 ## See it in action
 
 <p align="center">
-  <a href="NudgeAlarm_GooglePlay_v141_intro.mp4"><strong>▶ Watch the short product walkthrough</strong></a>
+  <a href="https://joynes.github.io/NudgeAlarm/"><strong>▶ Open the promotion page and play the embedded YouTube walkthrough</strong></a>
 </p>
 
 | Organize every quest | Act when it matters | Remind only at the right place | See real progress |

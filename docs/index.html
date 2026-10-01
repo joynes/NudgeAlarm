@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090a10">
+  <meta name="description" content="NudgeAlarm is the free, ad-free Android nagging reminder that keeps nudging until a task is done, snoozed or muted.">
+  <meta property="og:title" content="NudgeAlarm — reminders that keep nagging">
+  <meta property="og:description" content="Persistent, configurable Android reminders. Free, ad-free and open source.">
+  <meta property="og:image" content="https://joynes.github.io/NudgeAlarm/images/active-quests.png">
+  <meta property="og:type" content="website">
+  <title>NudgeAlarm — Persistent nagging reminders for Android</title>
+  <link rel="preconnect" href="https://www.youtube-nocookie.com">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="NudgeAlarm home">
+      <span class="brand-mark" aria-hidden="true">N</span>
+      <span>NUDGEALARM</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#demo">Demo</a>
+      <a href="#features">Features</a>
+      <a href="#timing">Reliability</a>
+      <a href="https://github.com/joynes/NudgeAlarm">Source</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">FREE · NO ADS · OPEN SOURCE</p>
+        <h1 id="hero-title">The reminder that keeps nagging until it gets done.</h1>
+        <p class="lead">One notification is easy to dismiss. NudgeAlarm can nudge you again and again—as often as every five minutes—until you complete, snooze or mute the task.</p>
+        <div class="actions">
+          <a class="button button-primary" href="https://play.google.com/store/apps/details?id=se.joynes.nudgealarm">Get it on Google Play</a>
+          <a class="button button-secondary" href="https://github.com/joynes/NudgeAlarm">View source on GitHub</a>
+        </div>
+        <ul class="hero-benefits" aria-label="Main benefits">
+          <li>Persistent nagging you control</li>
+          <li>Flexible snooze and Quiet Mode</li>
+          <li>Place-aware reminders</li>
+          <li>AI-friendly YAML import and export</li>
+        </ul>
+      </div>
+      <img class="hero-phone" src="images/active-quests.png" alt="NudgeAlarm showing active quests with complete and snooze actions">
+    </section>
+
+    <section class="demo" id="demo" aria-labelledby="demo-title">
+      <div class="section-heading">
+        <p class="eyebrow">WATCH THE APP IN ACTION</p>
+        <h2 id="demo-title">From an empty list to reminders that follow through.</h2>
+        <p>Create and configure quests, snooze or mute interruptions, use reusable places, filter larger lists, review statistics, and export selected reminders for editing with an external AI.</p>
+      </div>
+      <div class="video-frame">
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/FeTzaJkx1Qs?rel=0"
+          title="NudgeAlarm product walkthrough"
+          loading="eager"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen></iframe>
+      </div>
+    </section>
+
+    <section class="feature-strip" id="features" aria-label="Core features">
+      <article>
+        <p class="feature-number">01</p>
+        <h3>Keep nudging</h3>
+        <p>Choose the interval, maximum number of nudges and sticky behavior for each quest. A task stays active until you decide what happens next.</p>
+      </article>
+      <article>
+        <p class="feature-number">02</p>
+        <h3>Interrupt only when useful</h3>
+        <p>Snooze one or many quests, temporarily mute alerts with Quiet Mode, choose sound and vibration, or link a quest to a saved place.</p>
+      </article>
+      <article>
+        <p class="feature-number">03</p>
+        <h3>Stay in control</h3>
+        <p>Search, filter and reorder quests. Use templates, keep separate setups, inspect completion statistics and export only the reminders you select.</p>
+      </article>
+    </section>
+
+    <section class="showcase" aria-labelledby="showcase-title">
+      <div class="section-heading wide">
+        <p class="eyebrow">MORE THAN A SINGLE ALARM</p>
+        <h2 id="showcase-title">A complete reminder workflow, built around nagging.</h2>
+      </div>
+      <div class="screen-grid">
+        <figure>
+          <img src="images/quest-editor.png" alt="Quest editor with ordering and enable controls" loading="lazy">
+          <figcaption><strong>Organize every quest</strong><span>Search, filter, reorder and enable only what matters now.</span></figcaption>
+        </figure>
+        <figure>
+          <img src="images/quest-settings.png" alt="Quest scheduling and advanced reminder settings" loading="lazy">
+          <figcaption><strong>Tune every reminder</strong><span>Configure schedules, nag intervals, limits, sound, sticky behavior and places.</span></figcaption>
+        </figure>
+        <figure>
+          <img src="images/place-aware.png" alt="Place-aware reminder linked to Home" loading="lazy">
+          <figcaption><strong>Reuse meaningful places</strong><span>Switch which physical location counts as Home without relinking older quests.</span></figcaption>
+        </figure>
+        <figure>
+          <img src="images/statistics.png" alt="NudgeAlarm statistics and history" loading="lazy">
+          <figcaption><strong>See what works</strong><span>Review completion rates, streaks, response times and quest history.</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="ai-section" aria-labelledby="ai-title">
+      <div>
+        <p class="eyebrow">OPEN FORMAT, YOUR CHOICE OF AI</p>
+        <h2 id="ai-title">Create and reorganize reminders faster.</h2>
+        <p>Export selected quests as readable YAML. Give that text to ChatGPT, Claude or another tool to rename, reorder, duplicate or generate reminders, then import it back. NudgeAlarm does not send your data to an AI service.</p>
+      </div>
+      <pre aria-label="Example NudgeAlarm YAML"><code>reminders:
+  - title: "Take an afternoon walk"
+    schedule: "0 15 * * 1-5"
+    nag_interval: 15
+    max_nags: 4
+    sticky: false
+    enabled: true</code></pre>
+    </section>
+
+    <section class="timing" id="timing" aria-labelledby="timing-title">
+      <p class="eyebrow">TIMING &amp; ANDROID BACKGROUND LIMITS</p>
+      <h2 id="timing-title">Designed for persistent follow-through, not exact-to-the-second alarms.</h2>
+      <p>NudgeAlarm checks for due quests about every five minutes, so a reminder may arrive a few minutes after its scheduled time rather than exactly on the minute. Android can also delay or stop background work depending on the phone and battery settings; exact delivery time cannot be guaranteed.</p>
+      <p>For the most reliable nagging, allow notifications, keep the persistent <strong>NudgeAlarm Active</strong> notification enabled, and set battery use to <strong>Unrestricted</strong> or disable battery optimization for the app.</p>
+    </section>
+
+    <section class="final-cta" aria-labelledby="cta-title">
+      <p class="eyebrow">ANDROID 12+</p>
+      <h2 id="cta-title">Stop trusting one notification.</h2>
+      <p>Use a reminder that keeps asking until you make a decision.</p>
+      <div class="actions center">
+        <a class="button button-primary" href="https://play.google.com/store/apps/details?id=se.joynes.nudgealarm">Download NudgeAlarm</a>
+        <a class="button button-secondary" href="https://github.com/joynes/NudgeAlarm/blob/main/PRIVACY_POLICY.md">Read the privacy policy</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>NudgeAlarm is free, ad-free and open source under the MIT license.</span>
+    <a href="https://github.com/joynes/NudgeAlarm">GitHub repository</a>
+  </footer>
+</body>
+</html>
