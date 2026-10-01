@@ -51,7 +51,9 @@ internal fun SnoozePickerDialog(
     title: String,
     description: String,
     onSnooze: (Int) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    confirmLabel: String = "SNOOZE",
+    previewPrefix: String = "Remind me in"
 ) {
     val context = LocalContext.current
     val preferences = remember(context) { SnoozePreferences(context) }
@@ -81,7 +83,7 @@ internal fun SnoozePickerDialog(
                     DurationWheel("MINUTES", minutes, 59, "snooze_minutes_wheel") { minutes = it }
                 }
                 Text(
-                    if (duration > 0) "Remind me in ${snoozeDurationLabel(duration)} · $resumeTime"
+                    if (duration > 0) "$previewPrefix ${snoozeDurationLabel(duration)} · $resumeTime"
                     else "Choose at least 1 minute",
                     color = if (duration > 0) MegadriveCyan else MaterialTheme.colorScheme.error
                 )
@@ -122,7 +124,7 @@ internal fun SnoozePickerDialog(
                 onClick = { preferences.record(duration); onSnooze(duration) },
                 enabled = duration > 0,
                 colors = ButtonDefaults.buttonColors(containerColor = MegadriveCyan)
-            ) { Text("SNOOZE") }
+            ) { Text(confirmLabel) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL", color = MegadriveCyan) } }
     )

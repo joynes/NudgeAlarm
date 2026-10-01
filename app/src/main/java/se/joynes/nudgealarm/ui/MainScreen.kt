@@ -144,8 +144,6 @@ fun MainScreen(
     var showAbandonAllConfirm by remember { mutableStateOf(false) }
     var activeAllButtonShowsAbandon by remember { mutableStateOf(false) }
     var showCompleteRemainingConfirm by remember { mutableStateOf(false) }
-    var showSnoozeAllActive by remember { mutableStateOf(false) }
-    var showSnoozeAllRemaining by remember { mutableStateOf(false) }
     var showQuietModeDialog by remember { mutableStateOf(false) }
     var advancedQuest by remember { mutableStateOf<ActiveReminderUi?>(null) }
     var questPendingPermanentDelete by remember { mutableStateOf<ActiveReminderUi?>(null) }
@@ -266,14 +264,6 @@ fun MainScreen(
                         if (uiState.activeReminders.size > 1) {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
-                                    onClick = { showSnoozeAllActive = true },
-                                    shape = RoundedCornerShape(4.dp),
-                                    border = BorderStroke(1.dp, MegadriveCyan),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text("SNOOZE ALL", style = MaterialTheme.typography.labelSmall, color = MegadriveCyan)
-                                }
-                                OutlinedButton(
                                     onClick = {
                                         if (activeAllButtonShowsAbandon) {
                                             showAbandonAllConfirm = true
@@ -371,15 +361,6 @@ fun MainScreen(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                         ) {
                             Text("COMPLETE ALL", style = MaterialTheme.typography.labelSmall, color = MegadriveGreen)
-                        }
-                        OutlinedButton(
-                            onClick = { showSnoozeAllRemaining = true },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, MegadriveCyan),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
-                        ) {
-                            Text("SNOOZE ALL", style = MaterialTheme.typography.labelSmall, color = MegadriveCyan)
                         }
                         OutlinedButton(
                             onClick = { showAbandonAllConfirm = true },
@@ -1323,32 +1304,6 @@ fun MainScreen(
         )
     }
 
-    // === SNOOZE ALL ACTIVE ===
-    if (showSnoozeAllActive) {
-        SnoozePickerDialog(
-            title = "SNOOZE ALL ACTIVE",
-            description = "When should all ${uiState.activeReminders.size} quests nag again?",
-            onSnooze = { minutes ->
-                uiState.activeReminders.forEach { onSnooze(it.ruleId, minutes) }
-                showSnoozeAllActive = false
-            },
-            onDismiss = { showSnoozeAllActive = false }
-        )
-    }
-
-    // === SNOOZE ALL REMAINING ===
-    if (showSnoozeAllRemaining) {
-        SnoozePickerDialog(
-            title = "SNOOZE ALL",
-            description = "When should all ${uiState.todaysSchedule.size} quests nag again?",
-            onSnooze = { minutes ->
-                uiState.todaysSchedule.forEach { onSnooze(it.ruleId, minutes) }
-                showSnoozeAllRemaining = false
-            },
-            onDismiss = { showSnoozeAllRemaining = false }
-        )
-    }
-
     if (showQuietModeDialog) {
         QuietModeDurationDialog(
             onSelect = { minutes ->
@@ -1365,71 +1320,14 @@ internal fun QuietModeDurationDialog(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text(
-                text = "QUIET MODE",
-                style = MaterialTheme.typography.titleLarge,
-                color = MegadriveGreen,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Pause notification alerts for:",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf(30 to "30M", 60 to "1H", 120 to "2H").forEach { (minutes, label) ->
-                        QuietModeDurationButton(minutes, label, onSelect, Modifier.weight(1f))
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf(240 to "4H", 1440 to "24H").forEach { (minutes, label) ->
-                        QuietModeDurationButton(minutes, label, onSelect, Modifier.weight(1f))
-                    }
-                }
-                Text(
-                    text = "Alerts turn on automatically when the timer ends.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MegadriveGreen
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("< CANCEL", color = MegadriveCyan)
-            }
-        }
+    SnoozePickerDialog(
+        title = "PAUSE ALL ALERTS",
+        description = "Pause all notification alerts. They turn on automatically when the timer ends.",
+        onSnooze = onSelect,
+        onDismiss = onDismiss,
+        confirmLabel = "PAUSE",
+        previewPrefix = "Resume alerts in"
     )
-}
-
-@Composable
-private fun QuietModeDurationButton(
-    minutes: Int,
-    label: String,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    OutlinedButton(
-        onClick = { onSelect(minutes) },
-        modifier = modifier,
-        shape = RoundedCornerShape(4.dp),
-        border = BorderStroke(1.dp, MegadriveGreen),
-        contentPadding = PaddingValues(6.dp)
-    ) {
-        Text(label, color = MegadriveGreen, fontWeight = FontWeight.Bold)
-    }
 }
 
 @Composable

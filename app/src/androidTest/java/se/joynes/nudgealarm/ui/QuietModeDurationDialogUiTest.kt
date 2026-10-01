@@ -9,13 +9,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import se.joynes.nudgealarm.ui.theme.NudgeAlarmTheme
+import se.joynes.nudgealarm.storage.SnoozePreferences
+import android.content.Context
 
 class QuietModeDurationDialogUiTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun offersAllDurationsAndReturnsSelection() {
+    fun reusesSnoozeWheelsAndSavedCustomDuration() {
+        composeRule.activity.getSharedPreferences("snooze_picker", Context.MODE_PRIVATE).edit().clear().commit()
+        SnoozePreferences(composeRule.activity).record(97)
         var selectedMinutes: Int? = null
         composeRule.setContent {
             NudgeAlarmTheme {
@@ -26,12 +30,12 @@ class QuietModeDurationDialogUiTest {
             }
         }
 
-        composeRule.onNodeWithText("QUIET MODE").assertIsDisplayed()
-        listOf("30M", "1H", "2H", "4H", "24H").forEach {
-            composeRule.onNodeWithText(it).assertIsDisplayed()
-        }
-        composeRule.onNodeWithText("2H").performClick()
+        composeRule.onNodeWithText("PAUSE ALL ALERTS").assertIsDisplayed()
+        composeRule.onNodeWithText("HOURS").assertIsDisplayed()
+        composeRule.onNodeWithText("MINUTES").assertIsDisplayed()
+        composeRule.onNodeWithText("Resume alerts in 1h 37m", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("PAUSE").performClick()
 
-        composeRule.runOnIdle { assertEquals(120, selectedMinutes) }
+        composeRule.runOnIdle { assertEquals(97, selectedMinutes) }
     }
 }
