@@ -1576,7 +1576,7 @@ private fun ActiveQuestCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
 
-            // COMPLETE and ABANDON buttons on same row
+            // All quest actions share one compact row.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1586,30 +1586,27 @@ private fun ActiveQuestCard(
                     modifier = Modifier.weight(1f),
                     color = MegadriveGreen,
                     sound = ButtonSound.SUCCESS,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
                 ) {
-                    Text("COMPLETE!", fontSize = 12.sp)
+                    Text("COMPLETE", fontSize = 11.sp, maxLines = 1)
                 }
                 FeedbackOutlinedButton(
                     onClick = onCancel,
-                    modifier = Modifier.weight(0.6f),
+                    modifier = Modifier.weight(1f),
                     color = MegadriveRed,
                     sound = ButtonSound.CANCEL,
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
                 ) {
-                    Text("ABANDON", fontSize = 11.sp)
+                    Text("ABANDON", fontSize = 11.sp, maxLines = 1)
                 }
-            }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            FeedbackOutlinedButton(
-                onClick = { showSnoozePicker = true },
-                modifier = Modifier.fillMaxWidth(),
-                color = MegadriveCyan,
-                contentPadding = PaddingValues(4.dp)
-            ) {
-                Text("SNOOZE · CHOOSE WHEN", fontSize = 12.sp)
+                FeedbackOutlinedButton(
+                    onClick = { showSnoozePicker = true },
+                    modifier = Modifier.weight(1f),
+                    color = MegadriveCyan,
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                ) {
+                    Text("SNOOZE", fontSize = 11.sp, maxLines = 1)
+                }
             }
         }
     }
