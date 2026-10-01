@@ -1,19 +1,25 @@
 ---
 name: google-play-release
-description: Build, upload, and verify NudgeAlarm releases in Google Play Console. Use when publishing or updating this app on Google Play; do not use for ordinary APK sharing to Google Drive.
+description: "Release NudgeAlarm after changes in this project directory: bump the version, test, build, upload to Drive, and submit to the existing Google Play production and internal testing tracks."
 ---
 
 # Google Play Release
 
-Publish the Android app from this repository without disturbing the separately
-installed debug/test package.
+This skill belongs to the NudgeAlarm project directory
+`/Users/joka/terminalhub/nudge4`. Apply it after completing requested changes in
+this directory, even when the user does not repeat the publishing request.
+The user's standing instruction is to release new versions to Google Play as
+well as Google Drive. Keep the separately installed debug/test package intact.
 
 ## Prepare the release
 
 1. Read the repository `AGENTS.md` and `upload.md`; they remain authoritative.
 2. Inspect `git status` and preserve unrelated or untracked user files.
-3. Confirm `versionCode` and `versionName` in `app/build.gradle.kts`. The Play
-   version code must be higher than the latest version already in Play Console.
+3. Commit the completed changes, then bump and commit `versionCode` and
+   `versionName` in `app/build.gradle.kts` as required by `AGENTS.md`. Inspect
+   Play Console before choosing the version code; it must exceed every version
+   already uploaded. Reuse the bumped version when continuing an unfinished
+   release without additional changes.
 4. Use Android Studio's bundled JDK:
    `JAVA_HOME=/Applications/Android Studio.app/Contents/jbr/Contents/Home`.
 5. Run `./gradlew test` and `./gradlew connectedDebugAndroidTest` when an ADB
@@ -36,8 +42,10 @@ Use the existing signed-in Play Console session for application ID
 
 1. Inspect the current release dashboard, highest version code, active track,
    warnings, and any draft release before making changes. Do not guess a track.
-2. Continue the established release track unless the user requests a different
-   one. Do not promote from testing to production merely because a build exists.
+2. Update both established tracks: **Production** and **Internal testing**.
+   The user has authorized releases to both as part of this project's normal
+   change workflow. Preserve the existing countries and rollout settings unless
+   instructed otherwise. Do not add new test tracks or change tester access.
 3. Upload the newly built `app-release.aab` and verify that Play reports the
    intended version code and no blocking artifact error.
 4. Draft concise release notes from the commits included since the version that
@@ -48,9 +56,11 @@ Use the existing signed-in Play Console session for application ID
    require information not present in the repository.
 6. Immediately before the final rollout, review, or production submission,
    obtain any action-time confirmation required by the active browser policy.
-7. After submission, verify the version, track, rollout percentage, and status
-   shown by Play Console. Report whether it is live, in review, processing, or
-   only saved as a draft.
+7. After submission, verify the version and status in each track. Production
+   may require review while internal testing can become available immediately.
+   With managed publishing off, an approved production release publishes
+   automatically. Report each track separately as live, in review, processing,
+   or draft; do not describe an in-review release as live.
 
 Do not report a successful publication based only on an upload toast; the track
 status is the completion signal.
