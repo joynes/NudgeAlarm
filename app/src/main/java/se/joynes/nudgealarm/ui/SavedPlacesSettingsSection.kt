@@ -170,6 +170,7 @@ internal fun SavedPlacesSettingsSection(
                     OutlinedTextField(value = latitude, onValueChange = { latitude = it }, label = { Text("Latitude") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                     OutlinedTextField(value = longitude, onValueChange = { longitude = it }, label = { Text("Longitude") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                     OutlinedTextField(value = radius, onValueChange = { radius = it }, label = { Text("Radius in meters") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    Text("Use at least 100 m for reliable Android geofencing. 200–250 m is a good starting point.", style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = {

@@ -82,6 +82,7 @@ fun SettingsScreen(
             Text("SAVED PLACES", style = MaterialTheme.typography.headlineMedium, color = MegadriveCyan)
             Text("Choose a place to manage its positions", style = MaterialTheme.typography.bodySmall)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp)) {
+                GeofenceSetupCard(onNavigateToPermissions)
                 SavedPlacesSettingsSection(
                     places = uiState.savedPlaces,
                     linkedReminderCounts = uiState.linkedReminderCounts,

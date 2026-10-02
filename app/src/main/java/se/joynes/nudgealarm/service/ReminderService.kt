@@ -2,19 +2,13 @@ package se.joynes.nudgealarm.service
 
 import android.app.NotificationManager
 import android.app.Service
-import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.location.Location
-import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
-import android.os.CancellationSignal
 import android.os.IBinder
 import android.os.PowerManager
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,13 +19,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
 import se.joynes.nudgealarm.core.config.AppConfig
 import se.joynes.nudgealarm.core.config.ReminderConfig
-import se.joynes.nudgealarm.core.config.hasLocationCondition
 import se.joynes.nudgealarm.core.cron.CronExpression
-import se.joynes.nudgealarm.core.location.LocationCondition
+import se.joynes.nudgealarm.location.GeofenceMonitor
 import se.joynes.nudgealarm.core.event.Event
 import se.joynes.nudgealarm.database.AnalyticsRepository
 import se.joynes.nudgealarm.database.NagDatabase
@@ -50,7 +41,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
-import kotlin.coroutines.resume
 
 class ReminderService : Service() {
 
@@ -73,6 +63,8 @@ class ReminderService : Service() {
         const val ACTION_CANCEL_FROM_UI = "se.joynes.nudgealarm.ACTION_CANCEL_FROM_UI"
         const val ACTION_CANCEL_ALL_FROM_UI = "se.joynes.nudgealarm.ACTION_CANCEL_ALL_FROM_UI"
         const val ACTION_REFRESH_NOTIFICATION = "se.joynes.nudgealarm.ACTION_REFRESH_NOTIFICATION"
+        const val ACTION_LOCATION_CHANGED = "se.joynes.nudgealarm.ACTION_LOCATION_CHANGED"
+        const val EXTRA_LOCATION_ENTERED = "location_entered"
         const val EXTRA_CONFIG_URI = "config_uri"
         const val EXTRA_RULE_ID = "rule_id"
         const val EXTRA_RULE_IDS = "rule_ids"
@@ -108,14 +100,12 @@ class ReminderService : Service() {
     private lateinit var configLoader: ConfigLoader
     private lateinit var powerManager: PowerManager
     private lateinit var notificationManager: NotificationManager
-    private lateinit var locationManager: LocationManager
+    private lateinit var geofenceMonitor: GeofenceMonitor
     private lateinit var nagRepository: NagRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var reminderRepository: ReminderRepository
     private lateinit var savedPlaceRepository: SavedPlaceRepository
     private lateinit var settingsStore: se.joynes.nudgealarm.storage.SettingsStore
-    private var cachedLocation: Location? = null
-    private var locationForegroundEnabled = false
 
     private var config: AppConfig? = null
 
@@ -125,7 +115,6 @@ class ReminderService : Service() {
         configLoader = ConfigLoader(this)
         powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         settingsStore = se.joynes.nudgealarm.storage.SettingsStore(this)
         QuietModeController.expireIfNeeded(this)
 
@@ -135,6 +124,7 @@ class ReminderService : Service() {
         analyticsRepository = AnalyticsRepository(database.nagHistoryDao())
         reminderRepository = ReminderRepository(database.reminderDao())
         savedPlaceRepository = SavedPlaceRepository(database.savedPlaceDao())
+        geofenceMonitor = GeofenceMonitor(this, savedPlaceRepository)
 
         ChannelSetup.createChannels(this)
         eventLog.add(Event.Debug(detail = "ReminderService.onCreate() - channels created, database initialized"))
@@ -197,6 +187,21 @@ class ReminderService : Service() {
                 scheduleQuietModeExpiry()
                 serviceScope.launch { refreshCombinedNotification(silent = true) }
             }
+            ACTION_LOCATION_CHANGED -> {
+                if (isRunning) serviceScope.launch {
+                    val rules = if (reminderRepository.hasReminders())
+                        reminderRepository.getEnabledAsConfigs() else config?.reminders.orEmpty()
+                    geofenceMonitor.sync(rules)
+                    for (rule in rules) {
+                        try {
+                            checkAndFireRule(rule, System.currentTimeMillis())
+                        } catch (error: Exception) {
+                            eventLog.add(Event.ConfigError(error = "Error checking rule ${rule.id}: ${error.message}"))
+                        }
+                    }
+                    refreshCombinedNotification(silent = !intent.getBooleanExtra(EXTRA_LOCATION_ENTERED, false))
+                }
+            }
             else -> {
                 // Service restarted by system, try to resume
                 if (!isRunning) {
@@ -223,7 +228,7 @@ class ReminderService : Service() {
         isRunning = true
         eventLog.add(Event.ServiceStarted())
 
-        startReminderForeground(includeLocation = false)
+        startReminderForeground()
         scheduleQuietModeExpiry()
 
         // Resume any active nags from previous run
@@ -269,8 +274,14 @@ class ReminderService : Service() {
         notificationManager.cancel(ReminderNotification.COMBINED_NOTIFICATION_ID)
 
         eventLog.add(Event.ServiceStopped(reason = "user"))
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        serviceScope.launch {
+            geofenceMonitor.stop()
+            // A user may have restarted reminders while Android was removing geofences.
+            if (!isRunning) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
     }
 
     private fun reloadConfig() {
@@ -331,7 +342,6 @@ class ReminderService : Service() {
     }
 
     private fun startScheduler(appConfig: AppConfig) {
-        if (appConfig.reminders.any { it.hasLocationCondition }) enableLocationForegroundIfPossible()
         val pollIntervalMs = 5 * 60 * 1000L // 5 minutes
         eventLog.add(Event.SchedulerLoopIteration(detail = "Starting poll scheduler with ${appConfig.reminders.size} rules, poll every ${pollIntervalMs / 1000}s"))
 
@@ -343,6 +353,8 @@ class ReminderService : Service() {
         schedulerJob = serviceScope.launch {
             var iteration = 0
             while (isActive) {
+                // Synchronize registrations only when saved places/rules change. No position polling.
+                geofenceMonitor.sync(appConfig.reminders)
                 iteration++
                 val now = System.currentTimeMillis()
                 val cal = java.util.Calendar.getInstance()
@@ -421,120 +433,17 @@ class ReminderService : Service() {
     }
 
     private suspend fun locationAllows(rule: ReminderConfig): Boolean {
-        if (!rule.hasLocationCondition) return true
-        if (!hasBackgroundLocationPermission()) {
-            eventLog.add(Event.Debug(detail = "LOCATION_WAIT: ${rule.id} needs always-on location permission"))
-            return false
-        }
-        if (!locationForegroundEnabled) enableLocationForegroundIfPossible()
-        if (!locationForegroundEnabled) {
-            eventLog.add(Event.Debug(detail = "LOCATION_WAIT: ${rule.id} needs Android Location enabled"))
-            return false
-        }
-
-        val target = savedPlaceRepository.getActiveLocation(rule.placeId!!)
-        if (target == null) {
-            eventLog.add(Event.Debug(detail = "LOCATION_WAIT: ${rule.id} has no active saved position"))
-            return false
-        }
-        val location = currentLocation()
-        if (location == null) {
-            eventLog.add(Event.Debug(detail = "LOCATION_WAIT: ${rule.id} has no current position"))
-            return false
-        }
-
-        val inside = LocationCondition.isWithinRadius(
-            latitude = location.latitude,
-            longitude = location.longitude,
-            targetLatitude = target.latitude,
-            targetLongitude = target.longitude,
-            radiusMeters = target.radiusMeters
-        )
-        if (!inside) {
-            val distance = LocationCondition.distanceMeters(
-                location.latitude,
-                location.longitude,
-                target.latitude,
-                target.longitude
-            ).toInt()
-            eventLog.add(Event.Debug(detail = "LOCATION_WAIT: ${rule.id} is ${distance}m from required place"))
-        }
-        return inside
+        return geofenceMonitor.allows(rule)
     }
 
-    private fun hasBackgroundLocationPermission(): Boolean =
-        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-    private fun enableLocationForegroundIfPossible() {
-        if (locationForegroundEnabled || !hasBackgroundLocationPermission()) return
-        val providerEnabled = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
-            .any { runCatching { locationManager.isProviderEnabled(it) }.getOrDefault(false) }
-        if (!providerEnabled) return
-
-        try {
-            startReminderForeground(includeLocation = true)
-            locationForegroundEnabled = true
-        } catch (error: SecurityException) {
-            eventLog.add(Event.Debug(detail = "Location foreground mode unavailable: ${error.message}"))
-        }
-    }
-
-    private fun startReminderForeground(includeLocation: Boolean) {
-        val foregroundType = when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
-                    if (includeLocation) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
-            }
-            includeLocation -> ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-            else -> ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE
-        }
+    private fun startReminderForeground() {
+        val foregroundType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE
         startForeground(
             ReminderNotification.SERVICE_NOTIFICATION_ID,
             ReminderNotification.buildServiceNotification(this),
             foregroundType
         )
-    }
-
-    private suspend fun currentLocation(): Location? {
-        val now = System.currentTimeMillis()
-        cachedLocation?.let { cached ->
-            if (positionIsFresh(cached.time, now)) return cached
-        }
-
-        val lastKnown = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
-            .maxByOrNull { it.time }
-        if (lastKnown != null && positionIsFresh(lastKnown.time, now)) {
-            cachedLocation = lastKnown
-            return lastKnown
-        }
-
-        val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .firstOrNull { runCatching { locationManager.isProviderEnabled(it) }.getOrDefault(false) }
-            ?: return null
-        val fresh = withTimeoutOrNull(15_000) {
-            suspendCancellableCoroutine { continuation ->
-                val cancellationSignal = CancellationSignal()
-                continuation.invokeOnCancellation { cancellationSignal.cancel() }
-                try {
-                    locationManager.getCurrentLocation(
-                        provider,
-                        cancellationSignal,
-                        ContextCompat.getMainExecutor(this@ReminderService)
-                    ) { location ->
-                        if (continuation.isActive) continuation.resume(location)
-                    }
-                } catch (_: SecurityException) {
-                    if (continuation.isActive) continuation.resume(null)
-                }
-            }
-        }
-        if (fresh != null && positionIsFresh(fresh.time, System.currentTimeMillis())) {
-            cachedLocation = fresh
-            return fresh
-        }
-        return null
     }
 
     private fun updateNextTriggerDisplay(appConfig: AppConfig) {

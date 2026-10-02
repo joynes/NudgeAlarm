@@ -79,6 +79,13 @@ enum class Screen {
 }
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        // Re-evaluate permissions after returning from Android settings, without GPS polling.
+        if (ReminderService.isRunning) startService(Intent(this, ReminderService::class.java)
+            .setAction(ReminderService.ACTION_RELOAD))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger(this)

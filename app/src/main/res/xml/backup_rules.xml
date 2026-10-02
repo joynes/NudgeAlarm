@@ -7,6 +7,7 @@
 -->
 <full-backup-content>
     <include domain="sharedpref" path="."/>
+    <exclude domain="sharedpref" path="geofence_state.xml"/>
     <include domain="database" path="nag_database"/>
     <include domain="file" path="."/>
 </full-backup-content>

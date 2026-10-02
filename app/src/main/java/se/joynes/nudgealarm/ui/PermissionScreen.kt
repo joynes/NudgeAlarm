@@ -156,7 +156,8 @@ fun PermissionScreen(
                 Text(
                     "NudgeAlarm accesses your location while the app is closed or not in use " +
                         "only to decide whether a place-only quest may show its reminder. " +
-                        "Your location stays on this device and is not shared."
+                        "Android and Google Play services detect entry and exit without repeated GPS requests by NudgeAlarm. " +
+                        "Enable precise Location and Allow all the time. NudgeAlarm does not upload your saved places."
                 )
             },
             confirmButton = {
@@ -226,7 +227,7 @@ private fun PermissionCard(permission: PermissionState) {
                 )
             }
 
-            if (!permission.isGranted) {
+            if (!permission.isGranted || permission.name == "Location (optional)") {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = permission.onRequest,
@@ -242,7 +243,7 @@ private fun PermissionCard(permission: PermissionState) {
                     shape = RoundedCornerShape(4.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MegadrivePurple)
                 ) {
-                    Text(">> UNLOCK", color = Color.White)
+                    Text(if (permission.isGranted) ">> MANAGE" else ">> UNLOCK", color = Color.White)
                 }
             }
         }
@@ -274,10 +275,12 @@ private fun getPermissionStates(
         ),
         PermissionState(
             name = "Location (optional)",
-            description = "Used in the background only for place-only quests",
+            description = "For place-only quests: precise Location + Allow all the time. Android Location must be on.",
             isGranted = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED,
             onRequest = onRequestBackgroundLocation
         ),

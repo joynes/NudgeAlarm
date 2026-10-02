@@ -11,6 +11,3 @@ internal suspend fun notificationAllowed(
     val rule = currentRules[ruleId] ?: return false
     return rule.enabled && locationAllows(rule)
 }
-
-internal fun positionIsFresh(timestamp: Long, now: Long): Boolean =
-    now - timestamp in 0 until 120_000L

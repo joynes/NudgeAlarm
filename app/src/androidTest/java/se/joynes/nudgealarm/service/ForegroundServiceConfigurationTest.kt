@@ -29,6 +29,7 @@ class ForegroundServiceConfigurationTest {
             0,
             serviceInfo.foregroundServiceType and ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         )
+        assertEquals(0, serviceInfo.foregroundServiceType and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
         val subtype = context.packageManager.getProperty(
             "android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE",
             ComponentName(context, ReminderService::class.java)

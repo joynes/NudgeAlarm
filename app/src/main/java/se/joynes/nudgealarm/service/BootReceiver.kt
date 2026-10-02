@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import se.joynes.nudgealarm.core.event.Event
 import se.joynes.nudgealarm.storage.EventLogStore
+import se.joynes.nudgealarm.location.GeofenceStateStore
 
 /**
  * Receives system broadcasts to restart the service after:
@@ -20,10 +21,12 @@ class BootReceiver : BroadcastReceiver() {
 
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
+                GeofenceStateStore(context).invalidate("Restoring place monitoring after restart")
                 eventLog.add(Event.Debug(detail = "BootReceiver: BOOT_COMPLETED received"))
                 startServiceIfConfigured(context, eventLog, "boot")
             }
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                GeofenceStateStore(context).invalidate("Restoring place monitoring after update")
                 eventLog.add(Event.Debug(detail = "BootReceiver: MY_PACKAGE_REPLACED received (app updated)"))
                 startServiceIfConfigured(context, eventLog, "app_update")
             }

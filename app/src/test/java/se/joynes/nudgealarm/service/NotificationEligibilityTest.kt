@@ -23,9 +23,4 @@ class NotificationEligibilityTest {
         assertFalse(notificationAllowed("laundry", mapOf("laundry" to disabled)) { error("Should not check location") })
     }
 
-    @Test fun staleAndFuturePositionsAreRejected() {
-        assertTrue(positionIsFresh(999_999, 1_000_000))
-        assertFalse(positionIsFresh(880_000, 1_000_000))
-        assertFalse(positionIsFresh(1_000_001, 1_000_000))
-    }
 }

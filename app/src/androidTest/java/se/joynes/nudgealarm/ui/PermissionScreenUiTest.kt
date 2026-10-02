@@ -28,7 +28,8 @@ class PermissionScreenUiTest {
         composeRule.onNodeWithText(
             "NudgeAlarm accesses your location while the app is closed or not in use " +
                 "only to decide whether a place-only quest may show its reminder. " +
-                "Your location stays on this device and is not shared."
+                "Android and Google Play services detect entry and exit without repeated GPS requests by NudgeAlarm. " +
+                "Enable precise Location and Allow all the time. NudgeAlarm does not upload your saved places."
         ).assertIsDisplayed()
         composeRule.onNodeWithText("CONTINUE TO SETTINGS").assertIsDisplayed()
         composeRule.onNodeWithText("NOT NOW").assertIsDisplayed()

@@ -1336,7 +1336,8 @@ private fun QuestEditDialog(
                             Text(
                                 "NudgeAlarm accesses your location while the app is closed or not in use " +
                                     "only to decide whether this place-only quest may show its reminder. " +
-                                    "Your location stays on this device and is not shared."
+                                    "Android and Google Play services monitor entry and exit without repeated GPS requests by NudgeAlarm. " +
+                                    "Enable precise Location and Allow all the time. NudgeAlarm does not upload your saved places."
                             )
                         },
                         confirmButton = {
