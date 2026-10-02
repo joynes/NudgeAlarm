@@ -115,7 +115,6 @@ class ReminderService : Service() {
     private lateinit var savedPlaceRepository: SavedPlaceRepository
     private lateinit var settingsStore: se.joynes.nudgealarm.storage.SettingsStore
     private var cachedLocation: Location? = null
-    private var cachedLocationAt: Long = 0L
     private var locationForegroundEnabled = false
 
     private var config: AppConfig? = null
@@ -503,21 +502,20 @@ class ReminderService : Service() {
     private suspend fun currentLocation(): Location? {
         val now = System.currentTimeMillis()
         cachedLocation?.let { cached ->
-            if (now - cachedLocationAt < 2.minutes.inWholeMilliseconds) return cached
+            if (positionIsFresh(cached.time, now)) return cached
         }
 
         val lastKnown = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
             .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
             .maxByOrNull { it.time }
-        if (lastKnown != null && now - lastKnown.time < 2.minutes.inWholeMilliseconds) {
+        if (lastKnown != null && positionIsFresh(lastKnown.time, now)) {
             cachedLocation = lastKnown
-            cachedLocationAt = now
             return lastKnown
         }
 
         val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
             .firstOrNull { runCatching { locationManager.isProviderEnabled(it) }.getOrDefault(false) }
-            ?: return lastKnown
+            ?: return null
         val fresh = withTimeoutOrNull(15_000) {
             suspendCancellableCoroutine { continuation ->
                 val cancellationSignal = CancellationSignal()
@@ -535,11 +533,11 @@ class ReminderService : Service() {
                 }
             }
         }
-        if (fresh != null) {
+        if (fresh != null && positionIsFresh(fresh.time, System.currentTimeMillis())) {
             cachedLocation = fresh
-            cachedLocationAt = System.currentTimeMillis()
+            return fresh
         }
-        return fresh
+        return null
     }
 
     private fun updateNextTriggerDisplay(appConfig: AppConfig) {
@@ -754,9 +752,17 @@ class ReminderService : Service() {
             }
         }
 
-        val activeNags = allNags.filter {
+        val dueNags = allNags.filter {
             it.status == NagStatus.ACTIVE.name ||
             (it.status == NagStatus.SNOOZED.name && (it.snoozedUntil ?: Long.MAX_VALUE) <= now)
+        }
+
+        // Read current rules so edits affect already active occurrences too.
+        // Blocked occurrences remain in the database/UI until the user completes them.
+        val rules = (if (reminderRepository.hasReminders()) reminderRepository.getEnabledAsConfigs()
+            else config?.reminders.orEmpty()).associateBy { it.id }
+        val activeNags = dueNags.filter { nag ->
+            notificationAllowed(nag.ruleId, rules, ::locationAllows)
         }
 
         // Cancel old per-quest notifications

@@ -1504,7 +1504,7 @@ private fun QuestEditDialog(
     }
 }
 
-private fun captureCurrentLocation(context: Context, onResult: (Location?) -> Unit) {
+internal fun captureCurrentLocation(context: Context, onResult: (Location?) -> Unit) {
     if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
         onResult(null)
         return

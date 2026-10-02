@@ -89,15 +89,19 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         savedPlaceRepository.renamePlace(placeId, name)
     }
 
-    fun updatePosition(placeId: String, locationId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) = changePlace {
+    fun addPosition(placeId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) = changePlace(reloadService = true) {
+        savedPlaceRepository.addLocation(placeId, latitude, longitude, radiusMeters, label)
+    }
+
+    fun updatePosition(placeId: String, locationId: String, label: String, latitude: Double, longitude: Double, radiusMeters: Int) = changePlace(reloadService = true) {
         savedPlaceRepository.updatePosition(placeId, locationId, label, latitude, longitude, radiusMeters)
     }
 
-    fun selectPosition(placeId: String, locationId: String) = changePlace {
+    fun selectPosition(placeId: String, locationId: String) = changePlace(reloadService = true) {
         savedPlaceRepository.setActiveLocation(placeId, locationId)
     }
 
-    fun deletePosition(placeId: String, locationId: String) = changePlace {
+    fun deletePosition(placeId: String, locationId: String) = changePlace(reloadService = true) {
         savedPlaceRepository.deletePosition(placeId, locationId)
     }
 

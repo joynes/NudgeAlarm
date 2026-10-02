@@ -1,6 +1,7 @@
 package se.joynes.nudgealarm.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -15,6 +16,31 @@ import se.joynes.nudgealarm.ui.theme.NudgeAlarmTheme
 
 class SavedPlacesSettingsUiTest {
     @get:Rule val composeRule = createComposeRule()
+
+    @Test
+    fun lastPositionCanBeDeletedOnlyAfterConfirmationInDetailMenu() {
+        var deleted: String? = null
+        val home = SavedPlaceWithLocations(
+            SavedPlaceEntity("home", "Home", "here"),
+            listOf(SavedPlaceLocationEntity("here", "home", "Stockholm", 59.3, 18.0, 250))
+        )
+        composeRule.setContent {
+            NudgeAlarmTheme {
+                SavedPlacesSettingsSection(listOf(home), mapOf("home" to 2), null,
+                    { _, _ -> }, { _, _, _, _, _, _ -> }, { _, _ -> },
+                    { _, id -> deleted = id }, {})
+            }
+        }
+        composeRule.onNodeWithTag("delete-position-here").assertDoesNotExist()
+        composeRule.onNodeWithTag("open-place-home").performClick()
+        composeRule.onNodeWithTag("delete-position-here").assertIsEnabled().performClick()
+        composeRule.runOnIdle { assertEquals(null, deleted) }
+        composeRule.onNodeWithText("Stockholm will be removed. The place and quest links are kept. Alerts stay paused until you add a new position.").assertIsDisplayed()
+        composeRule.onNodeWithTag("confirm-delete-position").performClick()
+        composeRule.runOnIdle { assertEquals("here", deleted) }
+        composeRule.onNodeWithText("‹ ALL PLACES").performClick()
+        composeRule.onNodeWithTag("open-place-home").assertIsDisplayed()
+    }
 
     @Test
     fun deleteConfirmationShowsLinkedQuestImpact() {
@@ -38,6 +64,7 @@ class SavedPlacesSettingsUiTest {
             }
         }
 
+        composeRule.onNodeWithTag("open-place-home").performClick()
         composeRule.onNodeWithText("2 linked quests · 1 saved position").assertIsDisplayed()
         composeRule.onNodeWithTag("delete-place-home").performClick()
         composeRule.onNodeWithText("This removes all 1 saved positions. 2 linked quests will change to ANYWHERE.").assertIsDisplayed()

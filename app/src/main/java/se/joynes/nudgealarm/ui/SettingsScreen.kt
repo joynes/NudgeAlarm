@@ -50,6 +50,8 @@ import se.joynes.nudgealarm.ui.theme.MegadrivePurple
 import se.joynes.nudgealarm.ui.components.ButtonSound
 import se.joynes.nudgealarm.ui.components.FeedbackButton
 import se.joynes.nudgealarm.ui.components.FeedbackOutlinedButton
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material3.TextButton
 
 @Composable
 fun SettingsScreen(
@@ -69,9 +71,33 @@ fun SettingsScreen(
     onDeletePosition: (String, String) -> Unit,
     onDeletePlace: (String) -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAddPosition: (String, String, Double, Double, Int) -> Unit = { _, _, _, _, _ -> }
 ) {
     var showAllRingtones by remember { mutableStateOf(false) }
+    var showPlaces by remember { mutableStateOf(false) }
+    if (showPlaces) {
+        androidx.activity.compose.BackHandler { showPlaces = false }
+        Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+            Text("SAVED PLACES", style = MaterialTheme.typography.headlineMedium, color = MegadriveCyan)
+            Text("Choose a place to manage its positions", style = MaterialTheme.typography.bodySmall)
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp)) {
+                SavedPlacesSettingsSection(
+                    places = uiState.savedPlaces,
+                    linkedReminderCounts = uiState.linkedReminderCounts,
+                    error = uiState.placeError,
+                    onRenamePlace = onRenamePlace,
+                    onUpdatePosition = onUpdatePosition,
+                    onSelectPosition = onSelectPosition,
+                    onDeletePosition = onDeletePosition,
+                    onDeletePlace = onDeletePlace,
+                    onAddPosition = onAddPosition
+                )
+            }
+            TextButton(onClick = { showPlaces = false }, modifier = Modifier.fillMaxWidth()) { Text("BACK TO OPTIONS") }
+        }
+        return
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -100,16 +126,12 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            SavedPlacesSettingsSection(
-                places = uiState.savedPlaces,
-                linkedReminderCounts = uiState.linkedReminderCounts,
-                error = uiState.placeError,
-                onRenamePlace = onRenamePlace,
-                onUpdatePosition = onUpdatePosition,
-                onSelectPosition = onSelectPosition,
-                onDeletePosition = onDeletePosition,
-                onDeletePlace = onDeletePlace
-            )
+            Card(onClick = { showPlaces = true }, modifier = Modifier.fillMaxWidth().testTag("open-saved-places")) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("SAVED PLACES  ›", style = MaterialTheme.typography.titleMedium, color = MegadriveCyan)
+                    Text("${uiState.savedPlaces.size} places · Manage where reminders can alert you", style = MaterialTheme.typography.bodySmall)
+                }
+            }
 
             // === SOUND SETTINGS - Audio Configuration ===
             Card(

@@ -32,6 +32,20 @@ class SavedPlaceManagementTest {
     fun teardown() = database.close()
 
     @Test
+    fun deletingLastPositionKeepsPlaceAndQuestLinkUntilReplacement() = runTest {
+        val home = places.createPlace("Home", 59.3, 18.0, 250)
+        val quest = reminders.create("Laundry", "0 9 * * *", placeId = home.id)
+        val position = places.getAll().single().activeLocation!!
+        places.deletePosition(home.id, position.id)
+        assertNull(places.getActiveLocation(home.id))
+        assertTrue(places.getAll().single().locations.isEmpty())
+        assertEquals(home.id, reminders.getById(quest.id)?.placeId)
+        val replacement = places.addLocation(home.id, 59.4, 18.1, 200, "New home")
+        assertEquals(replacement.id, places.getActiveLocation(home.id)?.id)
+        assertEquals(home.id, reminders.getById(quest.id)?.placeId)
+    }
+
+    @Test
     fun deletingPlaceUnlinksQuestsAndRemovesAllPositions() = runTest {
         val home = places.createPlace("Home", 59.3, 18.0, 250)
         places.addLocation(home.id, 36.7, -4.4, 400, "Spain")

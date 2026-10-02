@@ -34,7 +34,7 @@ interface SavedPlaceDao {
     suspend fun updateLocation(location: SavedPlaceLocationEntity)
 
     @Query("UPDATE saved_places SET activeLocationId = :locationId, updatedAt = :updatedAt WHERE id = :placeId")
-    suspend fun setActiveLocation(placeId: String, locationId: String, updatedAt: Long)
+    suspend fun setActiveLocation(placeId: String, locationId: String?, updatedAt: Long)
 
     @Query("SELECT COUNT(*) FROM reminders WHERE placeId = :placeId")
     suspend fun getLinkedReminderCount(placeId: String): Int
@@ -64,9 +64,8 @@ interface SavedPlaceDao {
         val place = requireNotNull(getPlace(placeId)) { "Saved place not found" }
         require(getLocation(locationId)?.placeId == placeId) { "Position does not belong to place" }
         val remaining = getLocations(placeId).filterNot { it.id == locationId }
-        require(remaining.isNotEmpty()) { "Delete the saved place instead of its last position" }
         if (place.activeLocationId == locationId) {
-            setActiveLocation(placeId, remaining.first().id, System.currentTimeMillis())
+            setActiveLocation(placeId, remaining.firstOrNull()?.id, System.currentTimeMillis())
         }
         deleteLocationById(locationId)
     }

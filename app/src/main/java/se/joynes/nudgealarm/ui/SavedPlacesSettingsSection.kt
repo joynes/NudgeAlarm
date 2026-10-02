@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -41,8 +42,13 @@ internal fun SavedPlacesSettingsSection(
     onUpdatePosition: (String, String, String, Double, Double, Int) -> Unit,
     onSelectPosition: (String, String) -> Unit,
     onDeletePosition: (String, String) -> Unit,
-    onDeletePlace: (String) -> Unit
+    onDeletePlace: (String) -> Unit,
+    onAddPosition: (String, String, Double, Double, Int) -> Unit = { _, _, _, _, _ -> }
 ) {
+    val context = LocalContext.current
+    var selectedPlaceId by remember { mutableStateOf<String?>(null) }
+    val selected = places.find { it.place.id == selectedPlaceId }
+    androidx.activity.compose.BackHandler(enabled = selected != null) { selectedPlaceId = null }
     var renaming by remember { mutableStateOf<SavedPlaceWithLocations?>(null) }
     var editing by remember { mutableStateOf<Pair<String, SavedPlaceLocationEntity>?>(null) }
     var deletingPlace by remember { mutableStateOf<SavedPlaceWithLocations?>(null) }
@@ -57,12 +63,24 @@ internal fun SavedPlacesSettingsSection(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(">> SAVED PLACES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MegadriveCyan)
-            Text("Manage places used by your quests", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (selected != null) {
+                TextButton(onClick = { selectedPlaceId = null }) { Text("‹ ALL PLACES") }
+            }
             if (places.isEmpty()) {
                 Text("No saved places yet. Create one while editing a quest.", style = MaterialTheme.typography.bodySmall)
             }
-            places.forEach { saved ->
+            if (selected == null) {
+                places.forEach { saved ->
+                    Card(onClick = { selectedPlaceId = saved.place.id }, modifier = Modifier.fillMaxWidth().testTag("open-place-${saved.place.id}")) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("${saved.place.name}  ›", style = MaterialTheme.typography.titleMedium, color = MegadriveGreen)
+                            Text("${linkedReminderCounts[saved.place.id] ?: 0} linked quests · ${saved.locations.size} positions", style = MaterialTheme.typography.bodySmall)
+                            Text(saved.activeLocation?.let { "Active: ${it.label} · ${it.radiusMeters} m radius" } ?: "No position — alerts are paused", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            listOfNotNull(selected).forEach { saved ->
                 HorizontalDivider()
                 Text(saved.place.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MegadriveGreen)
                 val count = linkedReminderCounts[saved.place.id] ?: 0
@@ -75,6 +93,8 @@ internal fun SavedPlacesSettingsSection(
                         Text("DELETE PLACE", color = MegadriveRed)
                     }
                 }
+                Text("POSITIONS", style = MaterialTheme.typography.titleSmall)
+                Text("Use one position at a time. Switching keeps all quest links.", style = MaterialTheme.typography.bodySmall)
                 saved.locations.forEach { position ->
                     val active = position.id == saved.place.activeLocationId
                     Column(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
@@ -91,17 +111,17 @@ internal fun SavedPlacesSettingsSection(
                             }
                             TextButton(
                                 modifier = Modifier.testTag("delete-position-${position.id}"),
-                                onClick = { deletingPosition = saved.place.id to position },
-                                enabled = saved.locations.size > 1
+                                onClick = { deletingPosition = saved.place.id to position }
                             ) {
                                 Text("DELETE", color = MegadriveRed)
                             }
                         }
                     }
                 }
-                if (saved.locations.size == 1) {
-                    Text("Delete the place to remove its last position.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (saved.locations.isEmpty()) {
+                    Text("No position. Linked quests stay silent until you add one.", style = MaterialTheme.typography.bodySmall)
                 }
+                TextButton(onClick = { editing = saved.place.id to SavedPlaceLocationEntity("", saved.place.id, "", 0.0, 0.0, 200) }) { Text("+ ADD POSITION") }
             }
             error?.let { Text(it, color = MegadriveRed, style = MaterialTheme.typography.bodySmall) }
         }
@@ -124,17 +144,28 @@ internal fun SavedPlacesSettingsSection(
 
     editing?.let { (placeId, position) ->
         var label by remember(position.id) { mutableStateOf(position.label) }
-        var latitude by remember(position.id) { mutableStateOf(position.latitude.toString()) }
-        var longitude by remember(position.id) { mutableStateOf(position.longitude.toString()) }
+        var latitude by remember(position.id) { mutableStateOf(if (position.id.isEmpty()) "" else position.latitude.toString()) }
+        var longitude by remember(position.id) { mutableStateOf(if (position.id.isEmpty()) "" else position.longitude.toString()) }
         var radius by remember(position.id) { mutableStateOf(position.radiusMeters.toString()) }
+        var locationError by remember(position.id) { mutableStateOf<String?>(null) }
         val lat = latitude.toDoubleOrNull()
         val lon = longitude.toDoubleOrNull()
         val meters = radius.toIntOrNull()
         AlertDialog(
             onDismissRequest = { editing = null },
-            title = { Text("Edit saved position") },
+            title = { Text(if (position.id.isEmpty()) "Add position" else "Edit saved position") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        captureCurrentLocation(context) { location ->
+                            if (location != null) {
+                                latitude = location.latitude.toString()
+                                longitude = location.longitude.toString()
+                                locationError = null
+                            } else locationError = "Could not get your position. Enable Location and allow precise location for NudgeAlarm, or enter coordinates below."
+                        }
+                    }) { Text("USE MY CURRENT LOCATION") }
+                    locationError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MegadriveRed) }
                     OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Position label") }, singleLine = true)
                     OutlinedTextField(value = latitude, onValueChange = { latitude = it }, label = { Text("Latitude") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                     OutlinedTextField(value = longitude, onValueChange = { longitude = it }, label = { Text("Longitude") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
@@ -144,7 +175,8 @@ internal fun SavedPlacesSettingsSection(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onUpdatePosition(placeId, position.id, label, lat!!, lon!!, meters!!)
+                        if (position.id.isEmpty()) onAddPosition(placeId, label, lat!!, lon!!, meters!!)
+                        else onUpdatePosition(placeId, position.id, label, lat!!, lon!!, meters!!)
                         editing = null
                     },
                     enabled = label.isNotBlank() && lat != null && lat in -90.0..90.0 && lon != null && lon in -180.0..180.0 && meters != null && meters in 1..100_000
@@ -158,9 +190,11 @@ internal fun SavedPlacesSettingsSection(
         AlertDialog(
             onDismissRequest = { deletingPosition = null },
             title = { Text("Delete saved position?") },
-            text = { Text("${position.label} will be removed. If it is active, another saved position becomes active.") },
+            text = { Text(if (places.find { it.place.id == placeId }?.locations?.size == 1)
+                "${position.label} will be removed. The place and quest links are kept. Alerts stay paused until you add a new position."
+                else "${position.label} will be removed. If it is active, another saved position becomes active.") },
             confirmButton = {
-                TextButton(onClick = { onDeletePosition(placeId, position.id); deletingPosition = null }) { Text("DELETE", color = MegadriveRed) }
+                TextButton(modifier = Modifier.testTag("confirm-delete-position"), onClick = { onDeletePosition(placeId, position.id); deletingPosition = null }) { Text("DELETE", color = MegadriveRed) }
             },
             dismissButton = { TextButton(onClick = { deletingPosition = null }) { Text("CANCEL") } }
         )

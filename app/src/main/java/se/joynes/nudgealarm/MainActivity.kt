@@ -509,6 +509,9 @@ fun NudgeAlarmApp() {
                 onSelectPosition = { placeId, id -> settingsViewModel.selectPosition(placeId, id) },
                 onDeletePosition = { placeId, id -> settingsViewModel.deletePosition(placeId, id) },
                 onDeletePlace = { id -> settingsViewModel.deletePlace(id) },
+                onAddPosition = { placeId, label, latitude, longitude, radius ->
+                    settingsViewModel.addPosition(placeId, label, latitude, longitude, radius)
+                },
                 onBack = {
                     settingsViewModel.stopPreview()
                     eventLog.add(Event.NavigatedTo(screen = "Main (from Settings)"))
