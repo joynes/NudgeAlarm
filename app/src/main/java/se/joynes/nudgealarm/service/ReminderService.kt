@@ -390,11 +390,8 @@ class ReminderService : Service() {
                     eventLog.add(Event.SchedulerLoopIteration(detail = "TRIGGER (once): ${rule.id} '${rule.title}' (scheduled $triggerStr, key=$occurrenceKey)"))
                     fireReminder(rule, occurrenceKey, scheduledTime)
 
-                    // Sticky one-time reminders remain available until explicitly completed/deleted.
-                    if (!rule.sticky) {
-                        reminderRepository.delete(rule.id)
-                        eventLog.add(Event.Debug(detail = "One-time reminder ${rule.id} auto-deleted"))
-                    }
+                    // Keep the rule until completion so an active one-time reminder
+                    // can still be edited and have its place condition checked.
                 }
             }
         } else {
@@ -592,7 +589,7 @@ class ReminderService : Service() {
                     // Active reminder - record to history
                     analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
                     val rule = config?.reminders?.find { it.id == ruleId }
-                    if (rule?.sticky == true && rule.schedule.startsWith("once:")) {
+                    if (rule != null && rule.schedule.startsWith("once:")) {
                         reminderRepository.delete(ruleId)
                     }
                 } else {
@@ -641,7 +638,7 @@ class ReminderService : Service() {
                     // Record to history
                     analyticsRepository.recordCompletion(nagState, NagStatus.CANCELLED)
                     val rule = config?.reminders?.find { it.id == ruleId }
-                    if (rule?.sticky == true && rule.schedule.startsWith("once:")) {
+                    if (rule != null && rule.schedule.startsWith("once:")) {
                         reminderRepository.delete(ruleId)
                     }
                 } else {
@@ -666,6 +663,9 @@ class ReminderService : Service() {
                     val nagState = nagRepository.markDoneByRuleId(ruleId)
                     if (nagState != null) {
                         analyticsRepository.recordCompletion(nagState, NagStatus.COMPLETED)
+                        config?.reminders?.find { it.id == ruleId && it.schedule.startsWith("once:") }?.let {
+                            reminderRepository.delete(ruleId)
+                        }
                     }
                 }
             }
@@ -682,6 +682,9 @@ class ReminderService : Service() {
                     val nagState = nagRepository.markCancelledByRuleId(ruleId)
                     if (nagState != null) {
                         analyticsRepository.recordCompletion(nagState, NagStatus.CANCELLED)
+                        config?.reminders?.find { it.id == ruleId && it.schedule.startsWith("once:") }?.let {
+                            reminderRepository.delete(ruleId)
+                        }
                     } else {
                         val rule = config?.reminders?.find { it.id == ruleId }
                         if (rule != null) {
