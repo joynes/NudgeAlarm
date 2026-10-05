@@ -196,6 +196,11 @@ fun NudgeAlarmApp() {
     var showMenuDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingEditReminderId by remember { mutableStateOf<String?>(null) }
+    val editQuest: (String) -> Unit = { ruleId ->
+        pendingEditReminderId = ruleId
+        eventLog.add(Event.NavigatedTo(screen = "EditReminders ($ruleId)"))
+        currentScreen = Screen.EditReminders
+    }
 
     LaunchedEffect(Unit) {
         eventLog.add(Event.AppForegrounded())
@@ -415,11 +420,7 @@ fun NudgeAlarmApp() {
                 eventLog.add(Event.NavigatedTo(screen = "EditReminders"))
                 currentScreen = Screen.EditReminders
             },
-            onEditReminder = { ruleId ->
-                pendingEditReminderId = ruleId
-                eventLog.add(Event.NavigatedTo(screen = "EditReminders ($ruleId)"))
-                currentScreen = Screen.EditReminders
-            },
+            onEditReminder = editQuest,
             onMarkDone = { ruleId -> viewModel.markReminderDone(ruleId) },
             onMarkAllDone = { ruleIds -> viewModel.markAllRemindersDone(ruleIds) },
             onSnooze = { ruleId, minutes -> viewModel.snoozeReminder(ruleId, minutes) },
@@ -445,6 +446,8 @@ fun NudgeAlarmApp() {
 
         Screen.EventLog -> EventLogScreen(
             events = uiState.events,
+            editableQuestIds = ReminderService.currentConfig?.reminders?.map { it.id }?.toSet() ?: emptySet(),
+            onEditReminder = editQuest,
             onClear = { viewModel.clearEventLog() },
             onBack = {
                 eventLog.add(Event.NavigatedTo(screen = "Main (from EventLog)"))
@@ -454,6 +457,7 @@ fun NudgeAlarmApp() {
         )
 
         Screen.Status -> StatusScreen(
+            onEditReminder = editQuest,
             isServiceRunning = uiState.isServiceRunning,
             nextTriggerRule = uiState.nextTriggerRule,
             nextTriggerTime = ReminderService.nextTriggerTime,
@@ -468,6 +472,7 @@ fun NudgeAlarmApp() {
         )
 
         Screen.Routines -> RoutinesScreen(
+            onEditReminder = editQuest,
             reminders = ReminderService.currentConfig?.reminders ?: emptyList(),
             onBack = {
                 eventLog.add(Event.NavigatedTo(screen = "Main (from Routines)"))

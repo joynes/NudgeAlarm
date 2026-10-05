@@ -15,6 +15,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -540,6 +542,7 @@ private fun frequencyColor(schedule: String): Color {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CompactQuestRow(
     reminder: ReminderEntity,
@@ -559,7 +562,11 @@ private fun CompactQuestRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { if (selectionMode) onSelectionChange(!selected) else onEdit() }
+            .combinedClickable(
+                onClick = { if (selectionMode) onSelectionChange(!selected) else onEdit() },
+                onLongClick = if (selectionMode) null else onEdit,
+                onLongClickLabel = "Edit Quest"
+            )
             .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

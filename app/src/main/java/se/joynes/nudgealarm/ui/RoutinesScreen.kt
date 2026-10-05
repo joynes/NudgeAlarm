@@ -35,6 +35,7 @@ import se.joynes.nudgealarm.ui.components.FeedbackButton
 @Composable
 fun RoutinesScreen(
     reminders: List<ReminderConfig>,
+    onEditReminder: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -52,7 +53,7 @@ fun RoutinesScreen(
                 color = MegadriveGold
             )
             Text(
-                text = "${reminders.size} quests loaded",
+                text = "${reminders.size} quests loaded · Hold a quest to edit",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -93,7 +94,7 @@ fun RoutinesScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(reminders) { reminder ->
-                    QuestDetailCard(reminder = reminder)
+                    QuestDetailCard(reminder = reminder, onEdit = { onEditReminder(reminder.id) })
                 }
             }
         }
@@ -112,10 +113,11 @@ fun RoutinesScreen(
 }
 
 @Composable
-private fun QuestDetailCard(reminder: ReminderConfig) {
+private fun QuestDetailCard(reminder: ReminderConfig, onEdit: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .questEditGesture(onEdit)
             .border(2.dp, MegadriveGreen, RoundedCornerShape(4.dp)),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)

@@ -36,6 +36,7 @@ fun StatusScreen(
     lastTriggerRule: String?,
     lastTriggerTime: Long?,
     reminders: List<ReminderConfig>,
+    onEditReminder: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -97,7 +98,10 @@ fun StatusScreen(
         // Next Trigger
         if (nextTriggerRule != null && nextTriggerTime != null) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(
+                    if (reminders.any { it.id == nextTriggerRule })
+                        Modifier.questEditGesture({ onEditReminder(nextTriggerRule) }) else Modifier
+                ),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 )
@@ -129,7 +133,10 @@ fun StatusScreen(
         // Last Trigger
         if (lastTriggerRule != null && lastTriggerTime != null) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(
+                    if (reminders.any { it.id == lastTriggerRule })
+                        Modifier.questEditGesture({ onEditReminder(lastTriggerRule) }) else Modifier
+                ),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer
                 )
@@ -172,7 +179,7 @@ fun StatusScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(reminders) { reminder ->
-                ReminderCard(reminder = reminder)
+                ReminderCard(reminder = reminder, onEdit = { onEditReminder(reminder.id) })
             }
         }
 
@@ -188,9 +195,9 @@ fun StatusScreen(
 }
 
 @Composable
-private fun ReminderCard(reminder: ReminderConfig) {
+private fun ReminderCard(reminder: ReminderConfig, onEdit: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().questEditGesture(onEdit),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )

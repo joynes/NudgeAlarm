@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -297,7 +298,8 @@ fun MainScreen(
                             onDone = { onMarkDone(reminder.ruleId) },
                             onSnooze = { minutes -> onSnooze(reminder.ruleId, minutes) },
                             onCancel = { onCancel(reminder.ruleId) },
-                            onLongPress = { advancedQuest = reminder }
+                            onLongPress = { onEditReminder(reminder.ruleId) },
+                            onOptions = { advancedQuest = reminder }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -335,7 +337,7 @@ fun MainScreen(
                         )
                     }
                     Text(
-                        text = "Upcoming battles today",
+                        text = "Upcoming battles today · Hold a quest to edit",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -345,7 +347,8 @@ fun MainScreen(
                             scheduled = scheduled,
                             onMarkDone = { onMarkDone(scheduled.ruleId) },
                             onSnooze = { minutes -> onSnooze(scheduled.ruleId, minutes) },
-                            onCancel = { onCancel(scheduled.ruleId) }
+                            onCancel = { onCancel(scheduled.ruleId) },
+                            onEdit = { onEditReminder(scheduled.ruleId) }
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -1515,7 +1518,8 @@ private fun ActiveQuestCard(
     onDone: () -> Unit,
     onSnooze: (Int) -> Unit,
     onCancel: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onOptions: () -> Unit
 ) {
     var showSnoozePicker by remember { mutableStateOf(false) }
     val wasSnoozed = reminder.snoozeCount > 0
@@ -1525,10 +1529,11 @@ private fun ActiveQuestCard(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {},
+                onClick = onOptions,
                 onLongClick = onLongPress,
-                onLongClickLabel = "Open advanced quest options"
+                onLongClickLabel = "Edit Quest"
             )
+            .testTag("active-quest-${reminder.ruleId}")
             .border(
                 width = if (wasSnoozed) 2.dp else 1.dp,
                 color = borderColor,
@@ -1570,7 +1575,7 @@ private fun ActiveQuestCard(
                 )
             }
             Text(
-                text = "Hold quest for advanced options",
+                text = "Hold to edit · Tap for quest options",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1628,7 +1633,8 @@ private fun ScheduledQuestRow(
     scheduled: ScheduledReminderUi,
     onMarkDone: () -> Unit,
     onSnooze: (Int) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onEdit: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showSnoozePicker by remember { mutableStateOf(false) }
@@ -1638,7 +1644,8 @@ private fun ScheduledQuestRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showMenu = true }
+            .questEditGesture(onEdit = onEdit, onClick = { showMenu = true })
+            .testTag("scheduled-quest-${scheduled.ruleId}")
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

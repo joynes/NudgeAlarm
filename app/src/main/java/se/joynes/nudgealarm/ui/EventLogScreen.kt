@@ -37,6 +37,8 @@ import se.joynes.nudgealarm.ui.theme.MegadriveRed
 @Composable
 fun EventLogScreen(
     events: List<Event>,
+    editableQuestIds: Set<String>,
+    onEditReminder: (String) -> Unit,
     onClear: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -108,7 +110,8 @@ fun EventLogScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(events) { event ->
-                    EventCard(event = event)
+                    val ruleId = event.questRuleId()?.takeIf { it in editableQuestIds }
+                    EventCard(event = event, onEdit = ruleId?.let { { onEditReminder(it) } })
                 }
             }
         }
@@ -128,7 +131,7 @@ fun EventLogScreen(
 }
 
 @Composable
-private fun EventCard(event: Event) {
+private fun EventCard(event: Event, onEdit: (() -> Unit)?) {
     val isCritical = event is Event.ServiceKilled || event is Event.ConfigError || event is Event.Crash
     val isWarning = event is Event.ServiceStopped
     val isSuccess = event is Event.ServiceStarted || event is Event.UserTappedDone
@@ -150,6 +153,7 @@ private fun EventCard(event: Event) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onEdit != null) Modifier.questEditGesture(onEdit) else Modifier)
             .border(1.dp, borderColor, RoundedCornerShape(4.dp)),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
