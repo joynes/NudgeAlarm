@@ -21,8 +21,7 @@ class EventLogStore(context: Context) {
     private val listType: Type = object : TypeToken<List<Event>>() {}.type
     private val maxEvents = 500
 
-    @Synchronized
-    fun add(event: Event) {
+    fun add(event: Event) = synchronized(lock) {
         val events = getAll().toMutableList()
         events.add(event)
         while (events.size > maxEvents) {
@@ -32,30 +31,34 @@ class EventLogStore(context: Context) {
         prefs.edit().putString("events", json).apply()
     }
 
-    @Synchronized
-    fun getAll(): List<Event> {
-        val json = prefs.getString("events", null) ?: return emptyList()
-        return try {
-            val type = object : TypeToken<List<Event>>() {}.type
-            gson.fromJson(json, type) ?: emptyList()
+    fun getAll(): List<Event> = synchronized(lock) {
+        val json = prefs.getString("events", null) ?: return@synchronized emptyList()
+        try {
+            com.google.gson.JsonParser.parseString(json).asJsonArray.map { entry ->
+                runCatching { gson.fromJson(entry, Event::class.java) }.getOrElse {
+                    Event.Debug(detail = "Unreadable legacy event: $entry")
+                }
+            }
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    @Synchronized
-    fun clear() {
+    fun clear() = synchronized(lock) {
         prefs.edit().remove("events").apply()
     }
 
-    private class EventAdapter : JsonSerializer<Event>, JsonDeserializer<Event> {
+    companion object { private val lock = Any() }
+
+    internal class EventAdapter : JsonSerializer<Event>, JsonDeserializer<Event> {
         override fun serialize(
             src: Event,
             typeOfSrc: Type,
             context: JsonSerializationContext
         ): JsonElement {
             val jsonObject = JsonObject()
-            jsonObject.addProperty("type", src::class.java.simpleName)
+            // Persisted identifiers must never depend on R8-obfuscated class names.
+            jsonObject.addProperty("type", stableEventType(src))
             jsonObject.addProperty("timestamp", src.timestamp)
 
             when (src) {
@@ -116,8 +119,8 @@ class EventLogStore(context: Context) {
             context: JsonDeserializationContext
         ): Event {
             val jsonObject = json.asJsonObject
-            val type = jsonObject.get("type").asString
-            val timestamp = jsonObject.get("timestamp").asLong
+            val type = jsonObject.get("type")?.asString ?: "missing"
+            val timestamp = jsonObject.get("timestamp")?.asLong ?: 0L
 
             return when (type) {
                 "ServiceStarted" -> Event.ServiceStarted(timestamp)
@@ -200,8 +203,38 @@ class EventLogStore(context: Context) {
                     jsonObject.get("exceptionMessage")?.asString ?: "",
                     jsonObject.get("stackTrace")?.asString ?: ""
                 )
-                else -> Event.Debug(timestamp, "unknown event type: $type")
+                // Preserve remaining evidence from older, obfuscated releases.
+                else -> Event.Debug(timestamp, "Legacy event ($type): $jsonObject")
             }
         }
     }
+}
+
+internal fun stableEventType(event: Event): String = when (event) {
+    is Event.ServiceStarted -> "ServiceStarted"
+    is Event.ServiceStopped -> "ServiceStopped"
+    is Event.ServiceKilled -> "ServiceKilled"
+    is Event.ConfigLoaded -> "ConfigLoaded"
+    is Event.ConfigReloaded -> "ConfigReloaded"
+    is Event.ConfigError -> "ConfigError"
+    is Event.NextEventComputed -> "NextEventComputed"
+    is Event.WaitingUntil -> "WaitingUntil"
+    is Event.ReminderTriggered -> "ReminderTriggered"
+    is Event.NagFired -> "NagFired"
+    is Event.UserTappedDone -> "UserTappedDone"
+    is Event.UserTappedSnooze -> "UserTappedSnooze"
+    is Event.UserTappedCancel -> "UserTappedCancel"
+    is Event.SnoozeEnded -> "SnoozeEnded"
+    is Event.DeviceBooted -> "DeviceBooted"
+    is Event.BatteryOptimizationChanged -> "BatteryOptimizationChanged"
+    is Event.AppForegrounded -> "AppForegrounded"
+    is Event.AppBackgrounded -> "AppBackgrounded"
+    is Event.UiAction -> "UiAction"
+    is Event.NavigatedTo -> "NavigatedTo"
+    is Event.ConfigFileSelected -> "ConfigFileSelected"
+    is Event.TestConfigCreated -> "TestConfigCreated"
+    is Event.SchedulerLoopIteration -> "SchedulerLoopIteration"
+    is Event.CronParsed -> "CronParsed"
+    is Event.Debug -> "Debug"
+    is Event.Crash -> "Crash"
 }

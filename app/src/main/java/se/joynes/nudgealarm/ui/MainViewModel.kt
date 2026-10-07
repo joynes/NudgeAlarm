@@ -70,6 +70,8 @@ data class MainUiState(
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+    // Keep the captured report across Activity recreation while Android's file picker is open.
+    internal var pendingDebugReport: String? = null
     private val eventLogStore = EventLogStore(application)
     private val savedGamesStore = SavedGamesStore(application)
     private val appStateStore = AppStateStore(application)

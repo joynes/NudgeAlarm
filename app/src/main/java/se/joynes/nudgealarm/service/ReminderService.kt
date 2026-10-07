@@ -676,6 +676,8 @@ class ReminderService : Service() {
         val activeNags = dueNags.filter { nag ->
             notificationAllowed(nag.ruleId, rules, ::locationAllows)
         }
+        se.joynes.nudgealarm.location.GeofenceStateStore(this).record("notification_evaluation",
+            "due=${dueNags.map { it.ruleId }} shown=${activeNags.map { it.ruleId }} silent=$effectiveSilent")
 
         // Cancel old per-quest notifications
         for (nag in allNags) {

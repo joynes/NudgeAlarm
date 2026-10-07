@@ -28,7 +28,8 @@ data class DataExport(
     @SerializedName("nagHistory") val nagHistory: List<NagHistoryEntity>,
     @SerializedName("savedPlaces") val savedPlaces: List<SavedPlaceEntity>? = emptyList(),
     @SerializedName("savedPlaceLocations") val savedPlaceLocations: List<SavedPlaceLocationEntity>? = emptyList(),
-    @SerializedName("settings") val settings: ExportedSettings
+    @SerializedName("settings") val settings: ExportedSettings,
+    @SerializedName("diagnostics") val diagnostics: com.google.gson.JsonObject? = null
 )
 
 class DataExportStore(private val context: Context) {
@@ -59,7 +60,8 @@ class DataExportStore(private val context: Context) {
                 nagHistory = nagHistory,
                 savedPlaces = savedPlaces,
                 savedPlaceLocations = savedPlaceLocations,
-                settings = settings
+                settings = settings,
+                diagnostics = DebugExportStore(context).snapshot()
             )
 
             val json = gson.toJson(export)

@@ -228,8 +228,37 @@ fun NudgeAlarmApp() {
     val dataExporter = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        uri?.let { viewModel.exportAllData(it) {} }
+        uri?.let { viewModel.exportAllData(it) { result ->
+            android.widget.Toast.makeText(context, if (result.isSuccess) "Data and debug state exported" else "Export failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+        } }
     }
+
+    var debugExportBusy by remember { mutableStateOf(false) }
+    var showExportPrivacyDialog by remember { mutableStateOf(false) }
+    val debugExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val report = viewModel.pendingDebugReport
+        viewModel.pendingDebugReport = null
+        if (uri != null && report != null) coroutineScope.launch {
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(report.toByteArray(Charsets.UTF_8)) }
+                        ?: error("Could not open output file")
+                }
+            }
+            android.widget.Toast.makeText(context, if (result.isSuccess) "Debug report saved" else "Debug export failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    if (showExportPrivacyDialog) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { showExportPrivacyDialog = false },
+        title = { Text("Export data and diagnostics") },
+        text = { Text("The file includes saved coordinates, quest names, logs and this phone's place-monitoring state. Nothing is uploaded automatically. Share only with someone you trust. Device place state is never restored when importing.") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = {
+            showExportPrivacyDialog = false
+            dataExporter.launch("nudgealarm_backup_${System.currentTimeMillis()}.json")
+        }) { Text("EXPORT") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { showExportPrivacyDialog = false }) { Text("CANCEL") } }
+    )
 
     val dataImporter = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -391,9 +420,7 @@ fun NudgeAlarmApp() {
                 }
             },
             onExportData = {
-                val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
-                    .format(java.util.Date())
-                dataExporter.launch("nudgealarm_backup_$timestamp.json")
+                showExportPrivacyDialog = true
             },
             onImportData = {
                 dataImporter.launch(arrayOf("application/json", "*/*"))
@@ -449,6 +476,23 @@ fun NudgeAlarmApp() {
             editableQuestIds = ReminderService.currentConfig?.reminders?.map { it.id }?.toSet() ?: emptySet(),
             onEditReminder = editQuest,
             onClear = { viewModel.clearEventLog() },
+            exportInProgress = debugExportBusy,
+            onExport = {
+                debugExportBusy = true
+                coroutineScope.launch {
+                    val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { com.google.gson.GsonBuilder().setPrettyPrinting().serializeNulls().create()
+                            .toJson(se.joynes.nudgealarm.storage.DebugExportStore(context).snapshot()) }
+                    }
+                    debugExportBusy = false
+                    result.onSuccess {
+                        viewModel.pendingDebugReport = it
+                        debugExporter.launch("nudgealarm_debug_${System.currentTimeMillis()}.json")
+                    }.onFailure {
+                        android.widget.Toast.makeText(context, "Debug export failed: ${it.message}", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
             onBack = {
                 eventLog.add(Event.NavigatedTo(screen = "Main (from EventLog)"))
                 currentScreen = Screen.Main

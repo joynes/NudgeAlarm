@@ -13,6 +13,7 @@ class GeofenceReceiver : BroadcastReceiver() {
         val event = GeofencingEvent.fromIntent(intent) ?: return
         val store = GeofenceStateStore(context)
         val changed = if (event.hasError()) {
+            store.record("geofence_error", "errorCode=${event.errorCode}")
             store.invalidate("Place monitoring unavailable; waiting for Android Location to recover")
             true
         } else when (event.geofenceTransition) {

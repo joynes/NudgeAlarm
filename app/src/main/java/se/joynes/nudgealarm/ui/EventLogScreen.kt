@@ -41,6 +41,8 @@ fun EventLogScreen(
     onEditReminder: (String) -> Unit,
     onClear: () -> Unit,
     onBack: () -> Unit,
+    onExport: () -> Unit = {},
+    exportInProgress: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -77,6 +79,13 @@ fun EventLogScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(onClick = onExport, enabled = !exportInProgress, modifier = Modifier.fillMaxWidth()) {
+            Text(if (exportInProgress) "CAPTURING…" else "EXPORT DEBUG REPORT", color = MegadriveCyan)
+        }
+        Text("Includes saved locations, quest names, place state and logs. Share only with someone you trust.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (events.isEmpty()) {
             Card(

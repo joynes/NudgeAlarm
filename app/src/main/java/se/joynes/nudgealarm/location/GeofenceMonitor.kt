@@ -103,9 +103,12 @@ internal class GeofenceMonitor(context: Context, private val places: SavedPlaceR
 
     suspend fun allows(rule: ReminderConfig): Boolean {
         if (rule.placeId == null) return true
-        prerequisites()?.let { store.invalidate(it); return false }
-        val position = places.getActiveLocation(rule.placeId) ?: return false
-        return store.allows(GeofenceSpec.from(position))
+        val prerequisite = prerequisites()
+        if (prerequisite != null) store.invalidate(prerequisite)
+        val position = places.getActiveLocation(rule.placeId)
+        val allowed = prerequisite == null && position != null && store.allows(GeofenceSpec.from(position))
+        store.record("location_decision", "ruleId=${rule.id} placeId=${rule.placeId} positionId=${position?.id} allowed=$allowed reason=${prerequisite ?: if (position == null) "missing_active_position" else store.status()}")
+        return allowed
     }
 
     suspend fun stop() = withContext(NonCancellable) {
