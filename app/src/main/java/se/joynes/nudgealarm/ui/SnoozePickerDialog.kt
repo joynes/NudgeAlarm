@@ -61,6 +61,15 @@ internal fun SnoozePickerDialog(
     var hours by remember { mutableIntStateOf(history.lastMinutes / 60) }
     var minutes by remember { mutableIntStateOf(history.lastMinutes % 60) }
     var showRecent by remember { mutableStateOf(false) }
+    var customDurationSelected by remember { mutableStateOf(false) }
+    var submitted by remember { mutableStateOf(false) }
+    val applyDuration: (Int) -> Unit = { choice ->
+        if (!submitted && choice > 0) {
+            submitted = true
+            preferences.record(choice)
+            onSnooze(choice)
+        }
+    }
     val duration = hours * 60 + minutes
     val resumeTime = remember(duration) {
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + duration * 60_000L))
@@ -78,9 +87,9 @@ internal fun SnoozePickerDialog(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DurationWheel("HOURS", hours, MAX_SNOOZE_HOURS, "snooze_hours_wheel") { hours = it }
+                    DurationWheel("HOURS", hours, MAX_SNOOZE_HOURS, "snooze_hours_wheel") { hours = it; customDurationSelected = true }
                     Text(":", color = MegadriveCyan, fontSize = 28.sp)
-                    DurationWheel("MINUTES", minutes, 59, "snooze_minutes_wheel") { minutes = it }
+                    DurationWheel("MINUTES", minutes, 59, "snooze_minutes_wheel") { minutes = it; customDurationSelected = true }
                 }
                 Text(
                     if (duration > 0) "$previewPrefix ${snoozeDurationLabel(duration)} · $resumeTime"
@@ -91,7 +100,8 @@ internal fun SnoozePickerDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     history.suggestions.forEach { choice ->
                         OutlinedButton(
-                            onClick = { hours = choice / 60; minutes = choice % 60 },
+                            onClick = { applyDuration(choice) },
+                            enabled = !submitted,
                             modifier = Modifier.weight(1f),
                             border = BorderStroke(1.dp, MegadriveCyan),
                             contentPadding = PaddingValues(4.dp)
@@ -108,9 +118,8 @@ internal fun SnoozePickerDialog(
                                 DropdownMenuItem(
                                     text = { Text(snoozeDurationLabel(choice)) },
                                     onClick = {
-                                        hours = choice / 60
-                                        minutes = choice % 60
                                         showRecent = false
+                                        applyDuration(choice)
                                     }
                                 )
                             }
@@ -120,9 +129,9 @@ internal fun SnoozePickerDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = { preferences.record(duration); onSnooze(duration) },
-                enabled = duration > 0,
+            if (customDurationSelected) Button(
+                onClick = { applyDuration(duration) },
+                enabled = duration > 0 && !submitted,
                 colors = ButtonDefaults.buttonColors(containerColor = MegadriveCyan)
             ) { Text(confirmLabel) }
         },

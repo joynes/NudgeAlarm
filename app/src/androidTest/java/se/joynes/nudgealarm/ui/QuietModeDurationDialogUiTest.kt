@@ -34,7 +34,8 @@ class QuietModeDurationDialogUiTest {
         composeRule.onNodeWithText("HOURS").assertIsDisplayed()
         composeRule.onNodeWithText("MINUTES").assertIsDisplayed()
         composeRule.onNodeWithText("Resume alerts in 1h 37m", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("PAUSE").performClick()
+        composeRule.onNodeWithText("PAUSE").assertDoesNotExist()
+        composeRule.onNodeWithText("1h 37m").performClick()
 
         composeRule.runOnIdle { assertEquals(97, selectedMinutes) }
     }

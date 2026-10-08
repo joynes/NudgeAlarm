@@ -26,7 +26,7 @@ class SnoozePickerDialogUiTest {
         composeRule.activity.getSharedPreferences("snooze_picker", Context.MODE_PRIVATE).edit().clear().commit()
     }
 
-    @Test fun quickChoiceUpdatesWheelsAndSavesOnlyAfterConfirmation() {
+    @Test fun quickChoiceAppliesImmediatelyAndSavesHistory() {
         var selectedMinutes: Int? = null
         composeRule.setContent {
             NudgeAlarmTheme {
@@ -42,15 +42,27 @@ class SnoozePickerDialogUiTest {
         composeRule.onNodeWithText("SNOOZE QUEST").assertIsDisplayed()
         composeRule.onNodeWithText("HOURS").assertIsDisplayed()
         composeRule.onNodeWithText("MINUTES").assertIsDisplayed()
+        composeRule.onNodeWithText("SNOOZE").assertDoesNotExist()
         composeRule.onNodeWithText("2h").performClick()
-        composeRule.runOnIdle {
-            assertEquals(null, selectedMinutes)
-            assertTrue(SnoozePreferences(composeRule.activity).read().recent.isEmpty())
-        }
-        composeRule.onNodeWithText("SNOOZE").performClick()
         composeRule.runOnIdle {
             assertEquals(120, selectedMinutes)
             assertEquals(120, SnoozePreferences(composeRule.activity).read().lastMinutes)
+        }
+    }
+
+    @Test fun recentChoicePausesImmediatelyWithoutConfirmation() {
+        SnoozePreferences(composeRule.activity).record(97)
+        SnoozePreferences(composeRule.activity).record(30)
+        var selectedMinutes: Int? = null
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("PAUSE ALL ALERTS", "Pause all alerts", { selectedMinutes = it }, {}, confirmLabel = "PAUSE")
+        } }
+        composeRule.onNodeWithText("PAUSE").assertDoesNotExist()
+        composeRule.onNodeWithText("RECENT ▾").performClick()
+        composeRule.onAllNodesWithText("1h 37m")[1].performClick()
+        composeRule.runOnIdle {
+            assertEquals(97, selectedMinutes)
+            assertEquals(97, SnoozePreferences(composeRule.activity).read().lastMinutes)
         }
     }
 
@@ -75,6 +87,7 @@ class SnoozePickerDialogUiTest {
         }
         composeRule.onNodeWithTag("snooze_hours_wheel").performTouchInput { swipeUp(durationMillis = 600) }
         composeRule.onNodeWithTag("snooze_minutes_wheel").performTouchInput { swipeUp(durationMillis = 600) }
+        composeRule.runOnIdle { assertEquals(0, selectedMinutes) }
         composeRule.onNodeWithText("SNOOZE").performClick()
         composeRule.runOnIdle {
             assertTrue("Hours wheel must increase the duration", selectedMinutes >= 60)
