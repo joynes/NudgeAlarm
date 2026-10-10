@@ -2,6 +2,8 @@ package se.joynes.nudgealarm.ui
 
 import android.widget.NumberPicker
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,7 +82,7 @@ internal fun SnoozePickerDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title, color = MegadriveCyan) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(description, color = MaterialTheme.colorScheme.onSurface)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -97,15 +99,17 @@ internal fun SnoozePickerDialog(
                     color = if (duration > 0) MegadriveCyan else MaterialTheme.colorScheme.error
                 )
                 Text("QUICK PICKS", style = MaterialTheme.typography.labelSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    history.suggestions.forEach { choice ->
-                        OutlinedButton(
-                            onClick = { applyDuration(choice) },
-                            enabled = !submitted,
-                            modifier = Modifier.weight(1f),
-                            border = BorderStroke(1.dp, MegadriveCyan),
-                            contentPadding = PaddingValues(4.dp)
-                        ) { Text(snoozeDurationLabel(choice), color = MegadriveCyan) }
+                history.suggestions.chunked(3).forEach { choices ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        choices.forEach { choice ->
+                            OutlinedButton(
+                                onClick = { applyDuration(choice) },
+                                enabled = !submitted,
+                                modifier = Modifier.weight(1f).testTag("quick_pick_$choice"),
+                                border = BorderStroke(1.dp, MegadriveCyan),
+                                contentPadding = PaddingValues(4.dp)
+                            ) { Text(snoozeDurationLabel(choice), color = MegadriveCyan) }
+                        }
                     }
                 }
                 if (history.recent.isNotEmpty()) {

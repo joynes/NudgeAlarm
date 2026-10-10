@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,6 +25,27 @@ class SnoozePickerDialogUiTest {
 
     @Before fun clearHistory() {
         composeRule.activity.getSharedPreferences("snooze_picker", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+
+    @Test fun nineQuickPicksAreArrangedInThreeAscendingRows() {
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("PAUSE ALL ALERTS", "Pause alerts", {}, {}, confirmLabel = "PAUSE")
+        } }
+        val choices = listOf(5, 10, 15, 30, 60, 120, 240, 480, 1440)
+        val bounds = choices.map {
+            composeRule.onNodeWithTag("quick_pick_$it").performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        }
+        // Scroll back before comparing layout coordinates.
+        composeRule.onNodeWithTag("quick_pick_5").performScrollTo()
+        val layout = choices.map { composeRule.onNodeWithTag("quick_pick_$it").fetchSemanticsNode().boundsInRoot }
+        layout.chunked(3).forEach { row ->
+            assertEquals(row[0].top, row[1].top)
+            assertEquals(row[1].top, row[2].top)
+            assertTrue(row[0].left < row[1].left && row[1].left < row[2].left)
+        }
+        assertTrue(layout[0].top < layout[3].top && layout[3].top < layout[6].top)
+        assertEquals(9, bounds.size)
+        composeRule.onNodeWithText("PAUSE").assertDoesNotExist()
     }
 
     @Test fun quickChoiceAppliesImmediatelyAndSavesHistory() {
@@ -43,7 +65,7 @@ class SnoozePickerDialogUiTest {
         composeRule.onNodeWithText("HOURS").assertIsDisplayed()
         composeRule.onNodeWithText("MINUTES").assertIsDisplayed()
         composeRule.onNodeWithText("SNOOZE").assertDoesNotExist()
-        composeRule.onNodeWithText("2h").performClick()
+        composeRule.onNodeWithText("2h").performScrollTo().performClick()
         composeRule.runOnIdle {
             assertEquals(120, selectedMinutes)
             assertEquals(120, SnoozePreferences(composeRule.activity).read().lastMinutes)
@@ -58,7 +80,7 @@ class SnoozePickerDialogUiTest {
             SnoozePickerDialog("PAUSE ALL ALERTS", "Pause all alerts", { selectedMinutes = it }, {}, confirmLabel = "PAUSE")
         } }
         composeRule.onNodeWithText("PAUSE").assertDoesNotExist()
-        composeRule.onNodeWithText("RECENT ▾").performClick()
+        composeRule.onNodeWithText("RECENT ▾").performScrollTo().performClick()
         composeRule.onAllNodesWithText("1h 37m")[1].performClick()
         composeRule.runOnIdle {
             assertEquals(97, selectedMinutes)
@@ -74,7 +96,7 @@ class SnoozePickerDialogUiTest {
             }
         }
         composeRule.onNodeWithText("Remind me in 1h 37m", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("RECENT ▾").performClick()
+        composeRule.onNodeWithText("RECENT ▾").performScrollTo().performClick()
         composeRule.onAllNodesWithText("1h 37m").assertCountEquals(2)
     }
 

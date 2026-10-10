@@ -17,8 +17,9 @@ internal data class SnoozeHistory(val choices: List<SnoozeChoice> = emptyList())
 
     val suggestions: List<Int>
         get() = (choices.sortedWith(compareByDescending<SnoozeChoice> { it.uses }
-            .thenByDescending { it.lastUsed }).map { it.minutes } + listOf(15, 60, 120))
-            .distinct().take(3)
+            .thenByDescending { it.lastUsed }).map { it.minutes } +
+            listOf(5, 10, 15, 30, 60, 120, 240, 480, 1440))
+            .distinct().take(9).sorted()
 
     fun record(minutes: Int, now: Long): SnoozeHistory {
         require(minutes in 1..MAX_SNOOZE_MINUTES)
