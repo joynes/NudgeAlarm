@@ -3,6 +3,7 @@ package se.joynes.nudgealarm.storage
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 internal const val MAX_SNOOZE_HOURS = 168
 internal const val MAX_SNOOZE_MINUTES = MAX_SNOOZE_HOURS * 60 + 59
@@ -53,5 +54,30 @@ internal class SnoozePreferences(context: Context) {
                 .put("uses", choice.uses).put("lastUsed", choice.lastUsed))
         }
         prefs.edit().putString("history", array.toString()).apply()
+    }
+
+    fun clockShortcuts(): List<SnoozeClockShortcut> = try {
+        val array = JSONArray(prefs.getString("clock_shortcuts", "[]"))
+        (0 until array.length()).mapNotNull { index ->
+            runCatching {
+                val item = array.getJSONObject(index)
+                SnoozeClockShortcut(item.getString("id"), item.getString("name"), item.getInt("hour"), item.getInt("minute"))
+            }.getOrNull()
+        }.distinctBy { it.id }
+    } catch (_: Exception) { emptyList() }
+
+    fun saveClockShortcut(id: String?, name: String, hour: Int, minute: Int) {
+        val shortcut = SnoozeClockShortcut(id ?: UUID.randomUUID().toString(), name.trim(), hour, minute)
+        writeClockShortcuts(clockShortcuts().filterNot { it.id == shortcut.id } + shortcut)
+    }
+
+    fun deleteClockShortcut(id: String) = writeClockShortcuts(clockShortcuts().filterNot { it.id == id })
+
+    private fun writeClockShortcuts(shortcuts: List<SnoozeClockShortcut>) {
+        val array = JSONArray()
+        shortcuts.forEach {
+            array.put(JSONObject().put("id", it.id).put("name", it.name).put("hour", it.hour).put("minute", it.minute))
+        }
+        prefs.edit().putString("clock_shortcuts", array.toString()).apply()
     }
 }

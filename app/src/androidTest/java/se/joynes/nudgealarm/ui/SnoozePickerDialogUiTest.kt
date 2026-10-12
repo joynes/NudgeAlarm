@@ -2,6 +2,7 @@ package se.joynes.nudgealarm.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -19,12 +21,71 @@ import org.junit.Test
 import se.joynes.nudgealarm.ui.theme.NudgeAlarmTheme
 import se.joynes.nudgealarm.storage.SnoozePreferences
 import android.content.Context
+import java.time.ZonedDateTime
+import java.time.ZoneId
 
 class SnoozePickerDialogUiTest {
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Before fun clearHistory() {
         composeRule.activity.getSharedPreferences("snooze_picker", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+
+    @Test fun namedClockShortcutAppliesImmediatelyWithoutPollutingDurationHistory() {
+        val prefs = SnoozePreferences(composeRule.activity)
+        prefs.saveClockShortcut("lunch", "Lunch", 12, 0)
+        val now = ZonedDateTime.of(2026, 10, 12, 10, 30, 0, 0, ZoneId.systemDefault()).toInstant().toEpochMilli()
+        var selected = 0
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("SNOOZE QUEST", "Pause this quest", { selected = it }, {}, nowMillis = { now })
+        } }
+        composeRule.onNodeWithTag("snooze_clock_mode").performClick()
+        composeRule.onNodeWithText("12:00 · Today").assertIsDisplayed()
+        composeRule.onNodeWithTag("clock_shortcut_lunch").performClick()
+        composeRule.runOnIdle {
+            assertEquals(90, selected)
+            assertEquals(emptyList<Int>(), prefs.read().recent)
+        }
+    }
+
+    @Test fun passedClockShortcutShowsTomorrowAndAlsoWorksForPauseAll() {
+        SnoozePreferences(composeRule.activity).saveClockShortcut("work", "After work", 17, 0)
+        val now = ZonedDateTime.of(2026, 10, 12, 18, 0, 0, 0, ZoneId.systemDefault()).toInstant().toEpochMilli()
+        var selected = 0
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("PAUSE ALL ALERTS", "Pause all alerts", { selected = it }, {}, confirmLabel = "PAUSE", nowMillis = { now })
+        } }
+        composeRule.onNodeWithTag("snooze_clock_mode").performClick()
+        composeRule.onNodeWithText("17:00 · Tomorrow").assertIsDisplayed()
+        composeRule.onNodeWithTag("clock_shortcut_work").performClick()
+        composeRule.runOnIdle { assertEquals(23 * 60, selected) }
+    }
+
+    @Test fun shortcutsCanBeCreatedEditedAndDeletedWithoutSnoozing() {
+        var selected = 0
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("SNOOZE QUEST", "Pause this quest", { selected = it }, {})
+        } }
+        composeRule.onNodeWithTag("snooze_clock_mode").performClick()
+        composeRule.onNodeWithText("+ ADD SHORTCUT").performScrollTo().performClick()
+        composeRule.onNodeWithText("SAVE SHORTCUT").assertIsNotEnabled()
+        composeRule.onNodeWithTag("clock_shortcut_name").performTextReplacement("Lunch")
+        composeRule.onNodeWithText("SAVE SHORTCUT").performClick()
+        var id = ""
+        composeRule.runOnIdle { id = SnoozePreferences(composeRule.activity).clockShortcuts().single().id }
+        composeRule.onNodeWithTag("edit_clock_shortcut_$id").performScrollTo().performClick()
+        composeRule.onNodeWithTag("clock_shortcut_name").performTextReplacement("Dinner")
+        composeRule.onNodeWithText("SAVE SHORTCUT").performClick()
+        composeRule.runOnIdle {
+            assertEquals("Dinner", SnoozePreferences(composeRule.activity).clockShortcuts().single().name)
+            assertEquals(id, SnoozePreferences(composeRule.activity).clockShortcuts().single().id)
+        }
+        composeRule.onNodeWithTag("edit_clock_shortcut_$id").performScrollTo().performClick()
+        composeRule.onNodeWithText("DELETE SHORTCUT").performScrollTo().performClick()
+        composeRule.runOnIdle {
+            assertEquals(0, selected)
+            assertEquals(emptyList<Any>(), SnoozePreferences(composeRule.activity).clockShortcuts())
+        }
     }
 
     @Test fun nineQuickPicksAreArrangedInThreeAscendingRows() {
