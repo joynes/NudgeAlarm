@@ -268,7 +268,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val rule = ReminderService.currentConfig?.reminders?.find { it.id == snoozed.ruleId }
             ScheduledReminderUi(
                 ruleId = snoozed.ruleId,
-                title = "${snoozed.title} (snoozed)",
+                title = snoozed.title,
                 scheduledTime = SimpleDateFormat(if (snoozedUntil in startOfDay..endOfDay) "HH:mm" else "d MMM HH:mm", Locale.getDefault()).format(Date(snoozedUntil)),
                 scheduledTimeMillis = snoozedUntil,
                 isSnoozed = true,

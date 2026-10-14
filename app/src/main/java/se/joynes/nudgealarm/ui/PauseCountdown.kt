@@ -1,20 +1,31 @@
 package se.joynes.nudgealarm.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -74,25 +85,46 @@ internal fun rememberCountdownNow(deadlines: List<Long>): Long {
 }
 
 @Composable
-internal fun PauseAlertIndicator(quietMode: Boolean, until: Long, now: Long, onToggle: () -> Unit) {
-    Column(modifier = Modifier.widthIn(max = 104.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+internal fun PauseAlertIndicator(quietMode: Boolean, onToggle: () -> Unit) {
         IconButton(onClick = onToggle, modifier = Modifier.size(40.dp).testTag("pause-alerts-icon")) {
             Icon(imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
                 contentDescription = if (quietMode) "Unmute" else "Mute",
                 tint = if (quietMode) MegadriveRed else MegadriveGreen, modifier = Modifier.size(22.dp))
         }
-        if (quietMode) {
-            Text(if (until > 0L) pauseRemainingLabel(until, now) else "PAUSED",
-                fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                color = MegadrivePurple, modifier = Modifier.testTag("pause-alerts-remaining"))
-            if (until > 0L) Text(pauseEndLabel(until, now), fontSize = 10.sp, color = MegadrivePurple,
-                textAlign = TextAlign.Center, modifier = Modifier.testTag("pause-alerts-until"))
+}
+
+@Composable
+internal fun PauseStatusBanner(until: Long, now: Long, onResume: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth().testTag("pause-status-banner"),
+        shape = RoundedCornerShape(10.dp), color = MegadrivePurple.copy(alpha = 0.12f)) {
+        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.NotificationsOff, contentDescription = null, tint = MegadrivePurple, modifier = Modifier.size(20.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(if (until > 0L) pauseRemainingLabel(until, now) else "Alerts paused",
+                    fontFamily = FontFamily.SansSerif, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.testTag("pause-alerts-remaining"))
+                if (until > 0L) Text("Alerts paused · ${pauseEndLabel(until, now)}", fontFamily = FontFamily.SansSerif, fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("pause-alerts-until"))
+                else Text("Until you resume", fontFamily = FontFamily.SansSerif, fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onResume, modifier = Modifier.testTag("resume-alerts")) {
+                Text("RESUME", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
         }
     }
 }
 
 @Composable
 internal fun SnoozedQuestCountdown(until: Long, now: Long, modifier: Modifier = Modifier) {
-    Text("Snoozed · ${pauseRemainingLabel(until, now)} · ${pauseEndLabel(until, now)}",
-        color = MegadrivePurple, fontSize = 11.sp, modifier = modifier)
+    val remaining = pauseRemainingLabel(until, now)
+    Row(modifier.background(MegadrivePurple.copy(alpha = 0.14f), RoundedCornerShape(5.dp))
+        .semantics(mergeDescendants = true) { contentDescription = "Snoozed, $remaining, ${pauseEndLabel(until, now)}" }
+        .padding(horizontal = 6.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Snooze, contentDescription = null, tint = MegadrivePurple, modifier = Modifier.size(12.dp))
+        Text(remaining.removeSuffix(" left"), color = MaterialTheme.colorScheme.onSurface,
+            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium, fontSize = 11.sp)
+    }
 }

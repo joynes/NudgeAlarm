@@ -165,13 +165,12 @@ fun MainScreen(
             isRunning = uiState.isServiceRunning,
             currentGameName = uiState.currentGameName,
             quietMode = quietMode,
-            quietModeUntil = quietModeUntil,
-            now = pauseNow,
             onToggleQuietMode = {
                 if (quietMode) onSetQuietMode(null) else showQuietModeDialog = true
             },
             onMenuClick = onMenuClick
         )
+        if (quietMode) PauseStatusBanner(quietModeUntil, pauseNow, onResume = { onSetQuietMode(null) })
 
         // === PERMISSION WARNING - Very prominent! ===
         if (!hasNotificationPermission) {
@@ -1339,12 +1338,10 @@ internal fun QuietModeDurationDialog(
 }
 
 @Composable
-private fun RetroHeader(
+internal fun RetroHeader(
     isRunning: Boolean,
     currentGameName: String?,
     quietMode: Boolean,
-    quietModeUntil: Long,
-    now: Long,
     onToggleQuietMode: () -> Unit,
     onMenuClick: () -> Unit
 ) {
@@ -1406,7 +1403,7 @@ private fun RetroHeader(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PauseAlertIndicator(quietMode, quietModeUntil, now, onToggleQuietMode)
+            PauseAlertIndicator(quietMode, onToggleQuietMode)
             IconButton(
                 onClick = onMenuClick,
                 modifier = Modifier
@@ -1629,7 +1626,7 @@ private fun ActiveQuestCard(
 }
 
 @Composable
-private fun ScheduledQuestRow(
+internal fun ScheduledQuestRow(
     scheduled: ScheduledReminderUi,
     now: Long,
     onMarkDone: () -> Unit,
@@ -1668,8 +1665,6 @@ private fun ScheduledQuestRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (scheduled.isSnoozed) MegadrivePurple else MaterialTheme.colorScheme.onSurface
             )
-            if (scheduled.isSnoozed) SnoozedQuestCountdown(scheduled.scheduledTimeMillis, now,
-                Modifier.testTag("snooze-remaining-${scheduled.ruleId}"))
             if (readableSchedule.isNotEmpty()) {
                 Text(
                     text = readableSchedule,
@@ -1680,13 +1675,13 @@ private fun ScheduledQuestRow(
             }
         }
         // Time
-        Text(
-            text = scheduled.scheduledTime,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (scheduled.isSnoozed) MegadrivePurple else MegadriveGold,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
+        Column(Modifier.padding(horizontal = 8.dp), horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = scheduled.scheduledTime, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold, color = if (scheduled.isSnoozed) MegadrivePurple else MegadriveGold)
+            if (scheduled.isSnoozed) SnoozedQuestCountdown(scheduled.scheduledTimeMillis, now,
+                Modifier.testTag("snooze-remaining-${scheduled.ruleId}"))
+        }
         // Quick complete button
         IconButton(
             onClick = onMarkDone,
