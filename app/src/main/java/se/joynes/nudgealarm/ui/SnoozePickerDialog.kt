@@ -42,6 +42,7 @@ import se.joynes.nudgealarm.storage.SnoozePreferences
 import se.joynes.nudgealarm.storage.SnoozeClockShortcut
 import se.joynes.nudgealarm.storage.nextSnoozeClockTime
 import se.joynes.nudgealarm.storage.snoozeClockMinutes
+import se.joynes.nudgealarm.storage.suggestions
 import se.joynes.nudgealarm.ui.theme.MegadriveCyan
 import java.text.DateFormat
 import java.util.Date
@@ -77,12 +78,14 @@ internal fun SnoozePickerDialog(
     val context = LocalContext.current
     val preferences = remember(context) { SnoozePreferences(context) }
     val history = remember(preferences) { preferences.read() }
-    var hours by remember { mutableIntStateOf(history.lastMinutes / 60) }
-    var minutes by remember { mutableIntStateOf(history.lastMinutes % 60) }
+    val config = remember(preferences) { preferences.configuration() }
+    val initialDuration = if (config.rememberLast && history.choices.isNotEmpty()) history.lastMinutes else config.defaultMinutes
+    var hours by remember { mutableIntStateOf(initialDuration / 60) }
+    var minutes by remember { mutableIntStateOf(initialDuration % 60) }
     var showRecent by remember { mutableStateOf(false) }
     var customDurationSelected by remember { mutableStateOf(false) }
     var submitted by remember { mutableStateOf(false) }
-    var clockMode by remember { mutableStateOf(false) }
+    var clockMode by remember { mutableStateOf(config.defaultMode == "clock") }
     var shortcuts by remember { mutableStateOf(preferences.clockShortcuts()) }
     var showShortcutEditor by remember { mutableStateOf(false) }
     var editingShortcut by remember { mutableStateOf<SnoozeClockShortcut?>(null) }
@@ -145,7 +148,7 @@ internal fun SnoozePickerDialog(
                             }
                         }
                     }
-                    TextButton(onClick = { editingShortcut = null; showShortcutEditor = true }) {
+                    TextButton(onClick = { editingShortcut = null; showShortcutEditor = true }, enabled = shortcuts.size < 48) {
                         Text("+ ADD SHORTCUT", color = MegadriveCyan)
                     }
                     Text("OR CHOOSE A TIME", style = MaterialTheme.typography.labelSmall)
@@ -172,7 +175,7 @@ internal fun SnoozePickerDialog(
                         color = if (duration > 0) MegadriveCyan else MaterialTheme.colorScheme.error
                     )
                     Text("QUICK PICKS", style = MaterialTheme.typography.labelSmall)
-                    history.suggestions.chunked(3).forEach { choices ->
+                    history.suggestions(config).chunked(3).forEach { choices ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             choices.forEach { choice ->
                                 OutlinedButton(
@@ -185,13 +188,14 @@ internal fun SnoozePickerDialog(
                             }
                         }
                     }
-                    if (history.recent.isNotEmpty()) {
+                    if (config.recentCount > 0 && history.choices.isNotEmpty()) {
                         Box {
                             TextButton(onClick = { showRecent = true }) {
                                 Text("RECENT ▾", color = MegadriveCyan)
                             }
                             DropdownMenu(expanded = showRecent, onDismissRequest = { showRecent = false }) {
-                                history.recent.forEach { choice ->
+                                history.choices.sortedByDescending { it.lastUsed }.take(config.recentCount).forEach { entry ->
+                                    val choice = entry.minutes
                                     DropdownMenuItem(
                                         text = { Text(snoozeDurationLabel(choice)) },
                                         onClick = {
@@ -239,7 +243,7 @@ internal fun SnoozePickerDialog(
 }
 
 @Composable
-private fun ClockShortcutEditor(
+internal fun ClockShortcutEditor(
     shortcut: SnoozeClockShortcut?, initialHour: Int, initialMinute: Int,
     onSave: (String, Int, Int) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit
 ) {
@@ -270,7 +274,7 @@ private fun ClockShortcutEditor(
 }
 
 @Composable
-private fun DurationWheel(label: String, value: Int, maximum: Int, tag: String, onChange: (Int) -> Unit) {
+internal fun DurationWheel(label: String, value: Int, maximum: Int, tag: String, onChange: (Int) -> Unit) {
     val color = MaterialTheme.colorScheme.onSurface.toArgb()
     val textSize = with(LocalDensity.current) { 28.sp.toPx() }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

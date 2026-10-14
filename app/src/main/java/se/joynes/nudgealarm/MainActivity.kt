@@ -568,6 +568,7 @@ fun NudgeAlarmApp() {
                 onAddPosition = { placeId, label, latitude, longitude, radius ->
                     settingsViewModel.addPosition(placeId, label, latitude, longitude, radius)
                 },
+                onSettingsImported = { settingsViewModel.onSettingsImported() },
                 onBack = {
                     settingsViewModel.stopPreview()
                     eventLog.add(Event.NavigatedTo(screen = "Main (from Settings)"))

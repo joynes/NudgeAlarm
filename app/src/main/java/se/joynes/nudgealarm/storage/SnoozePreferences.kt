@@ -34,6 +34,38 @@ internal data class SnoozeHistory(val choices: List<SnoozeChoice> = emptyList())
 internal class SnoozePreferences(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("snooze_picker", Context.MODE_PRIVATE)
 
+    fun configuration(): SnoozeConfiguration = runCatching {
+        val value = JSONObject(prefs.getString("configuration", "{}") ?: "{}")
+        val defaults = SnoozeConfiguration()
+        SnoozeConfiguration(
+            durationPresets = value.optJSONArray("durationPresets")?.let { array ->
+                (0 until array.length()).map { array.getInt(it) }
+            } ?: defaults.durationPresets,
+            quickPickCount = value.optInt("quickPickCount", defaults.quickPickCount),
+            adaptive = value.optBoolean("adaptive", defaults.adaptive),
+            recentCount = value.optInt("recentCount", defaults.recentCount),
+            defaultMinutes = value.optInt("defaultMinutes", defaults.defaultMinutes),
+            rememberLast = value.optBoolean("rememberLast", defaults.rememberLast),
+            defaultMode = value.optString("defaultMode", defaults.defaultMode)
+        )
+    }.getOrElse { SnoozeConfiguration() }
+
+    fun saveConfiguration(config: SnoozeConfiguration) {
+        val value = JSONObject().put("durationPresets", JSONArray(config.durationPresets.sorted()))
+            .put("quickPickCount", config.quickPickCount).put("adaptive", config.adaptive)
+            .put("recentCount", config.recentCount).put("defaultMinutes", config.defaultMinutes)
+            .put("rememberLast", config.rememberLast).put("defaultMode", config.defaultMode)
+        prefs.edit().putString("configuration", value.toString()).apply()
+    }
+
+    fun clearHistory() { prefs.edit().remove("history").apply() }
+
+    fun replaceClockShortcuts(shortcuts: List<SnoozeClockShortcut>) {
+        require(shortcuts.size <= 48 && shortcuts.distinctBy { it.id }.size == shortcuts.size)
+        require(shortcuts.all { it.name.length <= 60 && it.id.length <= 100 })
+        writeClockShortcuts(shortcuts)
+    }
+
     fun read(): SnoozeHistory = try {
         val array = JSONArray(prefs.getString("history", "[]"))
         SnoozeHistory((0 until array.length()).mapNotNull { index ->
@@ -68,7 +100,7 @@ internal class SnoozePreferences(context: Context) {
 
     fun saveClockShortcut(id: String?, name: String, hour: Int, minute: Int) {
         val shortcut = SnoozeClockShortcut(id ?: UUID.randomUUID().toString(), name.trim(), hour, minute)
-        writeClockShortcuts(clockShortcuts().filterNot { it.id == shortcut.id } + shortcut)
+        replaceClockShortcuts(clockShortcuts().filterNot { it.id == shortcut.id } + shortcut)
     }
 
     fun deleteClockShortcut(id: String) = writeClockShortcuts(clockShortcuts().filterNot { it.id == id })

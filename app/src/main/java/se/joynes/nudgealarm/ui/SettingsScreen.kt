@@ -72,10 +72,21 @@ fun SettingsScreen(
     onDeletePlace: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onAddPosition: (String, String, Double, Double, Int) -> Unit = { _, _, _, _, _ -> }
+    onAddPosition: (String, String, Double, Double, Int) -> Unit = { _, _, _, _, _ -> },
+    onSettingsImported: () -> Unit = {}
 ) {
     var showAllRingtones by remember { mutableStateOf(false) }
     var showPlaces by remember { mutableStateOf(false) }
+    var showSnooze by remember { mutableStateOf(false) }
+    var showTransfer by remember { mutableStateOf(false) }
+    if (showSnooze) {
+        SnoozeSettingsScreen(onBack = { showSnooze = false }, modifier = modifier)
+        return
+    }
+    if (showTransfer) {
+        SettingsTransferScreen(onBack = { showTransfer = false }, onImported = onSettingsImported, modifier = modifier)
+        return
+    }
     if (showPlaces) {
         androidx.activity.compose.BackHandler { showPlaces = false }
         Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
@@ -127,6 +138,18 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Card(onClick = { showSnooze = true }, modifier = Modifier.fillMaxWidth().testTag("open-snooze-settings")) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("SNOOZE TIMES  ›", style = MaterialTheme.typography.titleMedium, color = MegadriveCyan)
+                    Text("Duration presets, clock shortcuts, adaptive suggestions and defaults", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Card(onClick = { showTransfer = true }, modifier = Modifier.fillMaxWidth().testTag("open-settings-transfer")) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("SETTINGS IMPORT / EXPORT  ›", style = MaterialTheme.typography.titleMedium, color = MegadriveCyan)
+                    Text("Documented JSON for external editing and AI discussions", style = MaterialTheme.typography.bodySmall)
+                }
+            }
             Card(onClick = { showPlaces = true }, modifier = Modifier.fillMaxWidth().testTag("open-saved-places")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("SAVED PLACES  ›", style = MaterialTheme.typography.titleMedium, color = MegadriveCyan)
@@ -345,7 +368,8 @@ fun SettingsScreen(
                         kotlin.math.abs(retentionOptions[it].first - uiState.oldReminderRetentionMinutes)
                     } ?: 6
                     Text(
-                        text = retentionOptions[retentionIndex].second,
+                        text = retentionOptions.firstOrNull { it.first == uiState.oldReminderRetentionMinutes }?.second
+                            ?: "${snoozeDurationLabel(uiState.oldReminderRetentionMinutes)} (custom)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MegadriveOrange
@@ -460,11 +484,7 @@ fun SettingsScreen(
                     Text(
                         text = when (uiState.minAlertIntervalMinutes) {
                             0 -> "Alert plays every nag cycle"
-                            else -> "Alert plays at most once every ${
-                                if (uiState.minAlertIntervalMinutes >= 60)
-                                    "${uiState.minAlertIntervalMinutes / 60}h"
-                                else "${uiState.minAlertIntervalMinutes}min"
-                            }"
+                            else -> "Alert plays at most once every ${snoozeDurationLabel(uiState.minAlertIntervalMinutes)}"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MegadriveGold.copy(alpha = 0.7f)

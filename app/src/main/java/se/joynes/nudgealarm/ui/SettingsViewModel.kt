@@ -121,6 +121,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    fun onSettingsImported() {
+        stopPreview()
+        loadSettings()
+        ChannelSetup.recreateReminderChannel(getApplication())
+        if (ReminderService.isRunning) {
+            getApplication<Application>().startService(Intent(getApplication(), ReminderService::class.java).apply {
+                action = ReminderService.ACTION_RELOAD
+            })
+        }
+    }
+
     fun setOldReminderRetentionMinutes(minutes: Int) {
         settingsStore.oldReminderRetentionMinutes = minutes
         _uiState.value = _uiState.value.copy(oldReminderRetentionMinutes = minutes)
