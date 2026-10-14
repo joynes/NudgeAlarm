@@ -29,8 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -130,7 +128,8 @@ fun MainScreen(
     onCancel: (String) -> Unit,
     onCancelAll: (List<String>) -> Unit,
     onDeletePermanently: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    quietModeUntil: Long = 0L
 ) {
     var showPresetDialog by remember { mutableStateOf(false) }
     var showNewGameDialog by remember { mutableStateOf(false) }
@@ -149,6 +148,9 @@ fun MainScreen(
     var advancedQuest by remember { mutableStateOf<ActiveReminderUi?>(null) }
     var questPendingPermanentDelete by remember { mutableStateOf<ActiveReminderUi?>(null) }
     val clipboardManager = LocalClipboardManager.current
+    val pauseDeadlines = uiState.todaysSchedule.filter { it.isSnoozed }.map { it.scheduledTimeMillis } +
+        if (quietMode && quietModeUntil > 0L) listOf(quietModeUntil) else emptyList()
+    val pauseNow = rememberCountdownNow(pauseDeadlines)
 
     Column(
         modifier = modifier
@@ -163,6 +165,8 @@ fun MainScreen(
             isRunning = uiState.isServiceRunning,
             currentGameName = uiState.currentGameName,
             quietMode = quietMode,
+            quietModeUntil = quietModeUntil,
+            now = pauseNow,
             onToggleQuietMode = {
                 if (quietMode) onSetQuietMode(null) else showQuietModeDialog = true
             },
@@ -337,7 +341,7 @@ fun MainScreen(
                         )
                     }
                     Text(
-                        text = "Upcoming battles today · Hold a quest to edit",
+                        text = "Today's schedule and snoozed quests · Hold a quest to edit",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -345,6 +349,7 @@ fun MainScreen(
                     uiState.todaysSchedule.forEach { scheduled ->
                         ScheduledQuestRow(
                             scheduled = scheduled,
+                            now = pauseNow,
                             onMarkDone = { onMarkDone(scheduled.ruleId) },
                             onSnooze = { minutes -> onSnooze(scheduled.ruleId, minutes) },
                             onCancel = { onCancel(scheduled.ruleId) },
@@ -1338,6 +1343,8 @@ private fun RetroHeader(
     isRunning: Boolean,
     currentGameName: String?,
     quietMode: Boolean,
+    quietModeUntil: Long,
+    now: Long,
     onToggleQuietMode: () -> Unit,
     onMenuClick: () -> Unit
 ) {
@@ -1399,14 +1406,7 @@ private fun RetroHeader(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onToggleQuietMode, modifier = Modifier.size(40.dp)) {
-                Icon(
-                    imageVector = if (quietMode) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
-                    contentDescription = if (quietMode) "Unmute" else "Mute",
-                    tint = if (quietMode) Color(0xFFFF4444) else MegadriveGreen,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+            PauseAlertIndicator(quietMode, quietModeUntil, now, onToggleQuietMode)
             IconButton(
                 onClick = onMenuClick,
                 modifier = Modifier
@@ -1631,6 +1631,7 @@ private fun ActiveQuestCard(
 @Composable
 private fun ScheduledQuestRow(
     scheduled: ScheduledReminderUi,
+    now: Long,
     onMarkDone: () -> Unit,
     onSnooze: (Int) -> Unit,
     onCancel: () -> Unit,
@@ -1667,6 +1668,8 @@ private fun ScheduledQuestRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (scheduled.isSnoozed) MegadrivePurple else MaterialTheme.colorScheme.onSurface
             )
+            if (scheduled.isSnoozed) SnoozedQuestCountdown(scheduled.scheduledTimeMillis, now,
+                Modifier.testTag("snooze-remaining-${scheduled.ruleId}"))
             if (readableSchedule.isNotEmpty()) {
                 Text(
                     text = readableSchedule,

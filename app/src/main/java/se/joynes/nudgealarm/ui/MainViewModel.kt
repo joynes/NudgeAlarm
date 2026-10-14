@@ -262,21 +262,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         } ?: emptyList()
 
-        // Add snoozed reminders to schedule with their snooze time
+        // Keep every snoozed quest visible, including pauses ending tomorrow or later.
         val snoozedSchedule = snoozedReminders.mapNotNull { snoozed ->
             val snoozedUntil = snoozed.snoozedUntil ?: return@mapNotNull null
-            // Only show if snooze time is today
-            if (snoozedUntil in startOfDay..endOfDay) {
-                val rule = ReminderService.currentConfig?.reminders?.find { it.id == snoozed.ruleId }
-                ScheduledReminderUi(
-                    ruleId = snoozed.ruleId,
-                    title = "${snoozed.title} (snoozed)",
-                    scheduledTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(snoozedUntil)),
-                    scheduledTimeMillis = snoozedUntil,
-                    isSnoozed = true,
-                    schedule = rule?.schedule ?: ""
-                )
-            } else null
+            val rule = ReminderService.currentConfig?.reminders?.find { it.id == snoozed.ruleId }
+            ScheduledReminderUi(
+                ruleId = snoozed.ruleId,
+                title = "${snoozed.title} (snoozed)",
+                scheduledTime = SimpleDateFormat(if (snoozedUntil in startOfDay..endOfDay) "HH:mm" else "d MMM HH:mm", Locale.getDefault()).format(Date(snoozedUntil)),
+                scheduledTimeMillis = snoozedUntil,
+                isSnoozed = true,
+                schedule = rule?.schedule ?: ""
+            )
         }
 
         // Combine and sort by time

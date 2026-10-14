@@ -353,6 +353,7 @@ fun NudgeAlarmApp() {
             uiState = uiState,
             hasNotificationPermission = hasNotificationPermission,
             quietMode = quietMode,
+            quietModeUntil = settingsStore.quietModeUntil,
             onSetQuietMode = setQuietMode,
             onMenuClick = { showMenuDialog = true },
             showMenu = showMenuDialog,
