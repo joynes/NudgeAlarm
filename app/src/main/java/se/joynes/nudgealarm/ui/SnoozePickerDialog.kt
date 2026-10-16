@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -36,6 +37,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
 import se.joynes.nudgealarm.storage.MAX_SNOOZE_HOURS
 import se.joynes.nudgealarm.storage.SnoozePreferences
@@ -43,6 +49,8 @@ import se.joynes.nudgealarm.storage.SnoozeClockShortcut
 import se.joynes.nudgealarm.storage.nextSnoozeClockTime
 import se.joynes.nudgealarm.storage.snoozeClockMinutes
 import se.joynes.nudgealarm.storage.suggestions
+import se.joynes.nudgealarm.storage.SnoozeQuickPick
+import se.joynes.nudgealarm.storage.snoozeQuickPicks
 import se.joynes.nudgealarm.ui.theme.MegadriveCyan
 import java.text.DateFormat
 import java.util.Date
@@ -175,17 +183,38 @@ internal fun SnoozePickerDialog(
                         color = if (duration > 0) MegadriveCyan else MaterialTheme.colorScheme.error
                     )
                     Text("QUICK PICKS", style = MaterialTheme.typography.labelSmall)
-                    history.suggestions(config).chunked(3).forEach { choices ->
+                    val picks = snoozeQuickPicks(history.suggestions(config), shortcuts, nowMillis())
+                    picks.chunked(3).forEach { choices ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            choices.forEach { choice ->
+                            choices.forEach { pick ->
+                                val clock = (pick as? SnoozeQuickPick.Clock)?.shortcut
+                                val durationPick = pick as? SnoozeQuickPick.Duration
+                                val tag = if (clock != null) "quick_clock_${clock.id}" else "quick_pick_${durationPick!!.minutes}"
                                 OutlinedButton(
-                                    onClick = { applyDuration(choice) },
+                                    onClick = {
+                                        if (clock != null) applyClockTime(clock.hour, clock.minute)
+                                        else applyDuration(durationPick!!.minutes)
+                                    },
                                     enabled = !submitted,
-                                    modifier = Modifier.weight(1f).testTag("quick_pick_$choice"),
+                                    modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag(tag),
                                     border = BorderStroke(1.dp, MegadriveCyan),
                                     contentPadding = PaddingValues(4.dp)
-                                ) { Text(snoozeDurationLabel(choice), color = MegadriveCyan) }
+                                ) {
+                                    if (clock == null) Text(snoozeDurationLabel(durationPick!!.minutes), color = MegadriveCyan)
+                                    else Column(horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.semantics(mergeDescendants = true) {
+                                            contentDescription = "Until ${clock.name}, ${clockLabel(clock.hour, clock.minute)}, ${clockDayLabel(clock.hour, clock.minute, nowMillis())}"
+                                        }) {
+                                        Text(clock.name, color = MegadriveCyan, fontSize = 10.sp, lineHeight = 12.sp,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                                        Text(clockLabel(clock.hour, clock.minute), color = MegadriveCyan,
+                                            fontSize = 13.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(clockDayLabel(clock.hour, clock.minute, nowMillis()), fontSize = 9.sp, lineHeight = 12.sp)
+                                    }
+                                }
                             }
+                            // Keep the last incomplete row aligned to the same three-column grid.
+                            repeat(3 - choices.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
                         }
                     }
                     if (config.recentCount > 0 && history.choices.isNotEmpty()) {

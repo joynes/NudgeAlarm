@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.performClick
@@ -29,6 +30,38 @@ class SnoozePickerDialogUiTest {
 
     @Before fun clearHistory() {
         composeRule.activity.getSharedPreferences("snooze_picker", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+
+    @Test fun savedClockIsAvailableDirectlyInDurationQuickPicksAndAppliesWithOneTap() {
+        val prefs = SnoozePreferences(composeRule.activity)
+        prefs.saveClockShortcut("lunch", "Lunch", 12, 0)
+        val now = ZonedDateTime.of(2026, 10, 16, 10, 30, 0, 0, ZoneId.systemDefault()).toInstant().toEpochMilli()
+        var selected = 0
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("SNOOZE QUEST", "Pause this quest", { selected = it }, {}, nowMillis = { now })
+        } }
+        composeRule.onNodeWithTag("quick_clock_lunch").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Until Lunch, 12:00, Today").assertExists()
+        composeRule.onNodeWithTag("quick_pick_5").assertExists()
+        composeRule.onNodeWithTag("quick_pick_1440").assertExists()
+        composeRule.onNodeWithTag("quick_clock_lunch").performClick()
+        composeRule.runOnIdle {
+            assertEquals(90, selected)
+            assertTrue(prefs.read().recent.isEmpty())
+        }
+    }
+
+    @Test fun quickClockWorksForPauseAllAndShowsTomorrowWhenTimeHasPassed() {
+        SnoozePreferences(composeRule.activity).saveClockShortcut("work", "After work", 17, 0)
+        val now = ZonedDateTime.of(2026, 10, 16, 18, 0, 0, 0, ZoneId.systemDefault()).toInstant().toEpochMilli()
+        var selected = 0
+        composeRule.setContent { NudgeAlarmTheme {
+            SnoozePickerDialog("PAUSE ALL ALERTS", "Pause all alerts", { selected = it }, {}, confirmLabel = "PAUSE", nowMillis = { now })
+        } }
+        composeRule.onNodeWithTag("quick_clock_work").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Until After work, 17:00, Tomorrow").assertExists()
+        composeRule.onNodeWithTag("quick_clock_work").performClick()
+        composeRule.runOnIdle { assertEquals(23 * 60, selected) }
     }
 
     @Test fun namedClockShortcutAppliesImmediatelyWithoutPollutingDurationHistory() {
