@@ -1,0 +1,17 @@
+TITLE
+I kept ignoring reminders, so I built a free app that keeps nagging me
+
+POST
+Hey! I made NudgeAlarm because I kept dismissing reminders and forgetting about them five minutes later.
+
+It is a free Android app that can keep reminding you until you complete, snooze, or mute the task. It also has location-based reminders and YAML import/export if you want to edit your reminders with an AI or another tool.
+
+It is completely free, has no ads or tracking, and is open source.
+
+Reminders are checked roughly every five minutes, so it is designed for persistent nagging rather than exact-to-the-minute alarms.
+
+I would really appreciate feedback, especially on whether the nagging and snooze controls feel useful or annoying :)
+
+Google Play: https://play.google.com/store/apps/details?id=se.joynes.nudgealarm
+GitHub: https://github.com/joynes/NudgeAlarm
+Demo: https://www.youtube.com/shorts/FeTzaJkx1Qs
