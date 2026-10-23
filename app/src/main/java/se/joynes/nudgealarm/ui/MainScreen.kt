@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -129,7 +130,8 @@ fun MainScreen(
     onCancelAll: (List<String>) -> Unit,
     onDeletePermanently: (String) -> Unit,
     modifier: Modifier = Modifier,
-    quietModeUntil: Long = 0L
+    quietModeUntil: Long = 0L,
+    onPickPlace: (String) -> Unit = {}
 ) {
     var showPresetDialog by remember { mutableStateOf(false) }
     var showNewGameDialog by remember { mutableStateOf(false) }
@@ -302,6 +304,7 @@ fun MainScreen(
                             onSnooze = { minutes -> onSnooze(reminder.ruleId, minutes) },
                             onCancel = { onCancel(reminder.ruleId) },
                             onLongPress = { onEditReminder(reminder.ruleId) },
+                            onPickPlace = { onPickPlace(reminder.ruleId) },
                             onOptions = { advancedQuest = reminder }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1516,7 +1519,8 @@ private fun ActiveQuestCard(
     onSnooze: (Int) -> Unit,
     onCancel: () -> Unit,
     onLongPress: () -> Unit,
-    onOptions: () -> Unit
+    onOptions: () -> Unit,
+    onPickPlace: () -> Unit
 ) {
     var showSnoozePicker by remember { mutableStateOf(false) }
     val wasSnoozed = reminder.snoozeCount > 0
@@ -1563,6 +1567,11 @@ private fun ActiveQuestCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                IconButton(onClick = onPickPlace, modifier = Modifier.testTag("quest-place-${reminder.ruleId}")) {
+                    Icon(Icons.Default.LocationOn,
+                        contentDescription = if (reminder.placeId == null) "Only at a place" else "Change reminder place",
+                        tint = if (reminder.placeId == null) MaterialTheme.colorScheme.onSurfaceVariant else MegadriveCyan)
+                }
             }
             if (wasSnoozed) {
                 Text(

@@ -12,6 +12,7 @@ import se.joynes.nudgealarm.database.NagStateEntity
 import se.joynes.nudgealarm.service.ActionReceiver
 
 object ReminderNotification {
+    const val EXTRA_PICK_PLACE = "pick_reminder_place"
     const val SERVICE_NOTIFICATION_ID = 1
     const val SUMMARY_NOTIFICATION_ID = 999
     const val COMBINED_NOTIFICATION_ID = 999
@@ -65,7 +66,8 @@ object ReminderNotification {
             rule.id,
             rule.title,
             nagCount,
-            rule.maxNags
+            rule.maxNags,
+            rule.placeId == null
         )
     }
 
@@ -77,7 +79,8 @@ object ReminderNotification {
         ruleId: String,
         title: String,
         nagCount: Int,
-        maxNags: Int
+        maxNags: Int,
+        offerPlace: Boolean = false
     ): Notification {
         val notificationId = getNotificationIdForRule(ruleId)
 
@@ -91,7 +94,6 @@ object ReminderNotification {
         val doneIntent = createActionIntent(context, ActionReceiver.ACTION_DONE, ruleId)
         val snooze15mIntent = createActionIntent(context, ActionReceiver.ACTION_SNOOZE_15M, ruleId)
         val snooze1hIntent = createActionIntent(context, ActionReceiver.ACTION_SNOOZE_1H, ruleId)
-        val snooze24hIntent = createActionIntent(context, ActionReceiver.ACTION_SNOOZE_24H, ruleId)
 
         val displayTitle = if (nagCount > 1) {
             "$title ($nagCount/$maxNags)"
@@ -111,8 +113,8 @@ object ReminderNotification {
             .setGroup(REMINDER_GROUP_KEY)
             .addAction(0, "DONE", doneIntent)
             .addAction(0, "15m", snooze15mIntent)
-            .addAction(0, "1h", snooze1hIntent)
-            .addAction(0, "24h", snooze24hIntent)
+            .addAction(0, if (offerPlace) "PLACE" else "1h",
+                if (offerPlace) createPlaceIntent(context, ruleId) else snooze1hIntent)
             .setAutoCancel(false)
             .build()
     }
@@ -151,7 +153,8 @@ object ReminderNotification {
     fun buildCombinedNotification(
         context: Context,
         activeNags: List<NagStateEntity>,
-        onlyAlertOnce: Boolean = false
+        onlyAlertOnce: Boolean = false,
+        unboundRuleIds: Set<String> = emptySet()
     ): Notification {
         val contentIntent = PendingIntent.getActivity(
             context,
@@ -178,7 +181,8 @@ object ReminderNotification {
                 .setOnlyAlertOnce(onlyAlertOnce)
                 .addAction(0, "DONE", doneIntent)
                 .addAction(0, "15m", snooze15mIntent)
-                .addAction(0, "1h", snooze1hIntent)
+                .addAction(0, if (nag.ruleId in unboundRuleIds) "PLACE" else "1h",
+                    if (nag.ruleId in unboundRuleIds) createPlaceIntent(context, nag.ruleId) else snooze1hIntent)
                 .setAutoCancel(false)
                 .build()
         } else {
@@ -202,6 +206,17 @@ object ReminderNotification {
                 .build()
         }
     }
+
+    internal fun createPlaceIntent(context: Context, ruleId: String): PendingIntent = PendingIntent.getActivity(
+        context, 0,
+        Intent(context, MainActivity::class.java).apply {
+            action = "se.joynes.nudgealarm.PICK_PLACE"
+            data = android.net.Uri.Builder().scheme("nudgealarm").authority("place").appendPath(ruleId).build()
+            putExtra(EXTRA_PICK_PLACE, ruleId)
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
     private fun createActionIntent(
         context: Context,

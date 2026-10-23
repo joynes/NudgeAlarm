@@ -53,6 +53,9 @@ interface ReminderDao {
     @Update
     suspend fun update(reminder: ReminderEntity)
 
+    @Query("UPDATE reminders SET placeId = :placeId, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setPlace(id: String, placeId: String, updatedAt: Long = System.currentTimeMillis()): Int
+
     /**
      * Delete a reminder.
      */

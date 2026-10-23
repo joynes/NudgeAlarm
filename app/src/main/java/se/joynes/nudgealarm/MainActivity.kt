@@ -79,6 +79,14 @@ enum class Screen {
 }
 
 class MainActivity : ComponentActivity() {
+    private var placeRequest by mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        placeRequest = intent.getStringExtra(se.joynes.nudgealarm.notification.ReminderNotification.EXTRA_PICK_PLACE)
+    }
+
     override fun onResume() {
         super.onResume()
         // Re-evaluate permissions after returning from Android settings, without GPS polling.
@@ -88,12 +96,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        placeRequest = intent.getStringExtra(se.joynes.nudgealarm.notification.ReminderNotification.EXTRA_PICK_PLACE)
         installCrashLogger(this)
         collectNativeCrashes(this)
         enableEdgeToEdge()
         setContent {
             NudgeAlarmTheme {
-                NudgeAlarmApp()
+                NudgeAlarmApp(placeRequest) {
+                    placeRequest = null
+                    intent.removeExtra(se.joynes.nudgealarm.notification.ReminderNotification.EXTRA_PICK_PLACE)
+                }
             }
         }
     }
@@ -177,8 +189,10 @@ fun checkNotificationPermission(context: Context): Boolean {
 }
 
 @Composable
-fun NudgeAlarmApp() {
+fun NudgeAlarmApp(placeRequest: String? = null, onPlaceRequestConsumed: () -> Unit = {}) {
     val viewModel: MainViewModel = viewModel()
+    val placeViewModel: se.joynes.nudgealarm.ui.ReminderPlaceViewModel = viewModel()
+    val placePicker by placeViewModel.state.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Main) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -200,6 +214,15 @@ fun NudgeAlarmApp() {
         pendingEditReminderId = ruleId
         eventLog.add(Event.NavigatedTo(screen = "EditReminders ($ruleId)"))
         currentScreen = Screen.EditReminders
+    }
+
+    LaunchedEffect(placeRequest) {
+        placeRequest?.let { placeViewModel.open(it); onPlaceRequestConsumed() }
+    }
+    placePicker?.let { state ->
+        se.joynes.nudgealarm.ui.ReminderPlacePicker(state, placeViewModel::select,
+            onEdit = { placeViewModel.dismiss(); editQuest(state.ruleId) },
+            onDismiss = placeViewModel::dismiss)
     }
 
     LaunchedEffect(Unit) {
@@ -449,6 +472,7 @@ fun NudgeAlarmApp() {
                 currentScreen = Screen.EditReminders
             },
             onEditReminder = editQuest,
+            onPickPlace = placeViewModel::open,
             onMarkDone = { ruleId -> viewModel.markReminderDone(ruleId) },
             onMarkAllDone = { ruleIds -> viewModel.markAllRemindersDone(ruleIds) },
             onSnooze = { ruleId, minutes -> viewModel.snoozeReminder(ruleId, minutes) },

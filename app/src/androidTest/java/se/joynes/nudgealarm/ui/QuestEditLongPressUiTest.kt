@@ -89,7 +89,14 @@ class QuestEditLongPressUiTest {
         composeRule.onNodeWithText("EXPORT 0").assertIsNotEnabled()
     }
 
-    @Composable private fun MainFixture(onEdit: (String)->Unit) {
+    @Test fun placeIconOpensPickerForTheCorrectActiveQuest() {
+        var selected = ""
+        composeRule.setContent { NudgeAlarmTheme { MainFixture(onPickPlace = { selected = it }, onEdit = {}) } }
+        composeRule.onNodeWithTag("quest-place-active").performScrollTo().performClick()
+        assertEquals("active", selected)
+    }
+
+    @Composable private fun MainFixture(onPickPlace: (String)->Unit = {}, onEdit: (String)->Unit) {
         MainScreen(
             uiState=MainUiState(isServiceRunning=true,hasGameLoaded=true,currentGameName="Test",activeReminders=listOf(ActiveReminderUi("active","Active quest","08:00")),todaysSchedule=listOf(ScheduledReminderUi("later","Later quest","09:00",1L))),
             hasNotificationPermission=true,quietMode=false,onSetQuietMode={},onMenuClick={},showMenu=false,onMenuDismiss={},
@@ -97,7 +104,7 @@ class QuestEditLongPressUiTest {
             onExportToClipboard={},onImportFromClipboard={_,_->},onExportData={},onImportData={},onLoadPreset={},
             onLoadSavedGame={},onDeleteSavedGame={},onCreateNewSchema={_,_->},onStartService={},onStopService={},
             onNavigateToPermissions={},onNavigateToEventLog={},onNavigateToRoutines={},onNavigateToEditReminders={},
-            onEditReminder=onEdit,onMarkDone={},onMarkAllDone={},onSnooze={_,_->},onCancel={},onCancelAll={},onDeletePermanently={}
+            onEditReminder=onEdit,onPickPlace=onPickPlace,onMarkDone={},onMarkAllDone={},onSnooze={_,_->},onCancel={},onCancelAll={},onDeletePermanently={}
         )
     }
 }

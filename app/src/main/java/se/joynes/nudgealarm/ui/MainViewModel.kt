@@ -41,7 +41,8 @@ data class ActiveReminderUi(
     val title: String,
     val triggeredAt: String,
     val snoozedUntil: String? = null,
-    val snoozeCount: Int = 0
+    val snoozeCount: Int = 0,
+    val placeId: String? = null
 )
 
 data class ScheduledReminderUi(
@@ -173,9 +174,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val events = withContext(Dispatchers.IO) {
             eventLogStore.getAll()
         }
-        val dbQuestCount = withContext(Dispatchers.IO) {
-            reminderRepository.getAllReminders().size
+        val dbQuests = withContext(Dispatchers.IO) {
+            reminderRepository.getAllReminders()
         }
+        val dbQuestCount = dbQuests.size
         val nextTime = ReminderService.nextTriggerTime
         val nextTimeStr = nextTime?.let {
             SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it))
@@ -194,7 +196,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 title = active.title,
                 triggeredAt = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(active.triggeredAt)),
                 snoozedUntil = null,
-                snoozeCount = active.snoozeCount
+                snoozeCount = active.snoozeCount,
+                placeId = dbQuests.find { it.id == active.ruleId }?.placeId
             )
         }
 

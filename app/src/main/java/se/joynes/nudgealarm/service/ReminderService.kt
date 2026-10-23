@@ -687,7 +687,8 @@ class ReminderService : Service() {
         if (activeNags.isEmpty()) {
             notificationManager.cancel(ReminderNotification.COMBINED_NOTIFICATION_ID)
         } else {
-            val notification = ReminderNotification.buildCombinedNotification(this, activeNags, onlyAlertOnce = effectiveSilent)
+            val notification = ReminderNotification.buildCombinedNotification(this, activeNags, onlyAlertOnce = effectiveSilent,
+                unboundRuleIds = rules.values.filter { it.placeId == null }.map { it.id }.toSet())
             notificationManager.notify(ReminderNotification.COMBINED_NOTIFICATION_ID, notification)
         }
 
