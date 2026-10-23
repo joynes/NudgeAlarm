@@ -30,6 +30,7 @@ class ReminderPlaceIntentTest {
             val intent = Intent(context, MainActivity::class.java)
                 .putExtra(ReminderNotification.EXTRA_PICK_PLACE, ids[0])
             ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+                try {
                 compose.waitUntil(10000) { compose.onAllNodesWithTag("quick-place-${home.id}").fetchSemanticsNodes().isNotEmpty() }
                 scenario.recreate()
                 compose.onNodeWithText("Only at a place").assertIsDisplayed()
@@ -40,6 +41,11 @@ class ReminderPlaceIntentTest {
                 compose.waitUntil(10000) { compose.onAllNodesWithText("Test ${ids[1]}").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithText("Cancel").performClick()
                 assertEquals(null, runBlocking { db.reminderDao().getById(ids[1])?.placeId })
+                } finally {
+                    // ActivityScenario tracks lifecycle by the launch intent. A real notification
+                    // replaces it in onNewIntent; restore it only for the test harness teardown.
+                    scenario.onActivity { it.intent = intent }
+                }
             }
         } finally {
             runBlocking { ids.forEach { db.reminderDao().deleteById(it) }; places.deletePlace(home.id) }
