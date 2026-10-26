@@ -17,7 +17,8 @@ internal data class SettingsConfiguration(
     val minAlertIntervalMinutes: Int = 0,
     val snooze: SnoozeConfiguration = SnoozeConfiguration(),
     val clockShortcuts: List<SnoozeClockShortcut> = emptyList(),
-    val discussions: Map<String, String> = emptyMap()
+    val discussions: Map<String, String> = emptyMap(),
+    val interactionGraceMinutes: Int = 15
 )
 
 /** Explicit field names avoid reflection/obfuscation changing the editable file format. */
@@ -26,7 +27,7 @@ internal object SettingsConfigurationCodec {
     private val keys = setOf("alarmSound", "vibrationEnabled", "customSoundUri", "customSoundName",
         "oldReminderRetentionMinutes", "alertOnlyWhenActive", "minAlertIntervalMinutes",
         "durationPresetsMinutes", "quickPickCount", "adaptiveQuickPicks", "recentCount",
-        "defaultDurationMinutes", "rememberLastDuration", "defaultSnoozeMode", "clockShortcuts")
+        "defaultDurationMinutes", "rememberLastDuration", "defaultSnoozeMode", "clockShortcuts", "interactionGraceMinutes")
 
     fun encode(config: SettingsConfiguration): String {
         val settings = JsonObject()
@@ -57,6 +58,9 @@ internal object SettingsConfigurationCodec {
             "Suppress sound and vibration when the screen is off. This does not complete quests or snooze them; other notification gates still apply.", "Boolean true or false", "true to avoid audible alerts while the screen is off.")
         field("minAlertIntervalMinutes", number(config.minAlertIntervalMinutes), number(0),
             "Global minimum interval between audible/vibrating alerts, regardless of an individual quest's nag interval. Does not change quest schedules or snooze duration.", "Integer 0..10080 minutes; 0 means no additional cooldown", "60 = alert at most once per hour.")
+        field("interactionGraceMinutes", number(config.interactionGraceMinutes), number(15),
+            "Quiet repeated sound, vibration and heads-up alerts for existing reminders after opening or interacting with NudgeAlarm. Each interaction renews this period. Reminders remain visible and are not completed or snoozed. New reminders and a snooze ending after the interaction can still alert. The last interaction timestamp is device-local and is never imported.",
+            "Integer 0..10139 minutes; 0 disables this grace period", "15 gives a quarter-hour break after using the app; 30 gives half an hour.")
         val snooze = config.snooze
         field("durationPresetsMinutes", gson.toJsonTree(snooze.durationPresets.sorted()), gson.toJsonTree(DEFAULT_SNOOZE_PRESETS),
             "Duration shortcuts shared by quest snooze and pause-all. Sorted shortest first. In fixed mode these are the only Quick Picks; adaptive mode may replace choices with learned durations. Removing a preset does not delete recent history.",
@@ -95,7 +99,8 @@ internal object SettingsConfigurationCodec {
         val root = JsonParser.parseString(text).asJsonObject
         require(root["format"]?.asString == "nudgealarm-settings" && root["version"]?.toString() == "1") { "Unsupported settings format/version" }
         val entries = root["settings"]?.asJsonObject ?: error("Missing settings object")
-        require(entries.keySet() == keys) { "Settings keys must match the export: missing ${keys - entries.keySet()}, unknown ${entries.keySet() - keys}" }
+        val requiredKeys = keys - "interactionGraceMinutes" // Accept settings exported before this option existed.
+        require(entries.keySet().containsAll(requiredKeys) && keys.containsAll(entries.keySet())) { "Settings keys must match the export: missing ${requiredKeys - entries.keySet()}, unknown ${entries.keySet() - keys}" }
         fun value(key: String): JsonElement = entries[key].asJsonObject["value"] ?: error("Missing value for $key")
         fun integer(element: JsonElement, key: String): Int {
             require(element.isJsonPrimitive && element.asJsonPrimitive.isNumber && element.toString().matches(Regex("-?[0-9]+"))) { "$key must be an integer" }
@@ -124,11 +129,12 @@ internal object SettingsConfigurationCodec {
         require(clocks.size <= 48 && clocks.distinctBy { it.id }.size == clocks.size && clocks.all { it.id.length <= 100 && it.name.length <= 60 }) { "Invalid or duplicate clock shortcuts" }
         val config = SnoozeConfiguration(durations.sorted(), int("quickPickCount", 1..24), bool("adaptiveQuickPicks"),
             int("recentCount", 0..20), int("defaultDurationMinutes", 1..MAX_SNOOZE_MINUTES), bool("rememberLastDuration"), string(value("defaultSnoozeMode"), "defaultSnoozeMode"))
-        val notes = keys.associateWith { key ->
+        val notes = entries.keySet().associateWith { key ->
             entries[key].asJsonObject["discussion"]?.let { string(it, "$key.discussion") }.orEmpty().also { require(it.length <= 4000) { "Discussion for $key exceeds 4000 characters" } }
         }
         return SettingsConfiguration(sound, bool("vibrationEnabled"), uri, name, int("oldReminderRetentionMinutes", 1..10080),
-            bool("alertOnlyWhenActive"), int("minAlertIntervalMinutes", 0..10080), config, clocks, notes.filterValues { it.isNotEmpty() })
+            bool("alertOnlyWhenActive"), int("minAlertIntervalMinutes", 0..10080), config, clocks, notes.filterValues { it.isNotEmpty() },
+            if (entries.has("interactionGraceMinutes")) int("interactionGraceMinutes", 0..10139) else 15)
     }
 
     fun changes(before: SettingsConfiguration, after: SettingsConfiguration): List<String> {

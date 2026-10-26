@@ -179,6 +179,7 @@ object ReminderNotification {
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(onlyAlertOnce)
+                .setSilent(onlyAlertOnce)
                 .addAction(0, "DONE", doneIntent)
                 .addAction(0, "15m", snooze15mIntent)
                 .addAction(0, if (nag.ruleId in unboundRuleIds) "PLACE" else "1h",
@@ -201,6 +202,7 @@ object ReminderNotification {
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(onlyAlertOnce)
+                .setSilent(onlyAlertOnce)
                 .addAction(0, "Open app", contentIntent)
                 .setAutoCancel(false)
                 .build()

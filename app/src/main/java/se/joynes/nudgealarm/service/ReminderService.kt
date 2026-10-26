@@ -648,10 +648,6 @@ class ReminderService : Service() {
         val minIntervalMs = settingsStore.minAlertIntervalMinutes * 60_000L
         val rateLimited = !silent && minIntervalMs > 0 && (now - lastAlertTimeMs) < minIntervalMs
 
-        val effectiveSilent = silent || screenSilent || rateLimited
-
-        // Track last audible alert time
-        if (!effectiveSilent) lastAlertTimeMs = now
         val allNags = nagRepository.getActiveNags()
 
         // Clear expired snoozes
@@ -676,8 +672,15 @@ class ReminderService : Service() {
         val activeNags = dueNags.filter { nag ->
             notificationAllowed(nag.ruleId, rules, ::locationAllows)
         }
+        val lastInteraction = se.joynes.nudgealarm.notification.ReminderAttentionStore(this).lastInteractionAt
+        val interactionSilent = activeNags.isNotEmpty() && activeNags.all { nag ->
+            se.joynes.nudgealarm.notification.repeatAlertAcknowledged(
+                nag.triggeredAt, nag.snoozedUntil, lastInteraction, settingsStore.interactionGraceMinutes, now)
+        }
+        val effectiveSilent = silent || screenSilent || rateLimited || interactionSilent
+        if (!effectiveSilent && activeNags.isNotEmpty()) lastAlertTimeMs = now
         se.joynes.nudgealarm.location.GeofenceStateStore(this).record("notification_evaluation",
-            "due=${dueNags.map { it.ruleId }} shown=${activeNags.map { it.ruleId }} silent=$effectiveSilent")
+            "due=${dueNags.map { it.ruleId }} shown=${activeNags.map { it.ruleId }} silent=$effectiveSilent interactionGrace=$interactionSilent lastInteraction=$lastInteraction")
 
         // Cancel old per-quest notifications
         for (nag in allNags) {

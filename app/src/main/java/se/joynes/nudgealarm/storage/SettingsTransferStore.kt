@@ -13,7 +13,8 @@ internal class SettingsTransferStore(private val context: Context) {
     fun snapshot() = SettingsConfiguration(settings.alarmSound.name, settings.vibrationEnabled,
         settings.customSoundUri?.toString(), settings.customSoundName, settings.oldReminderRetentionMinutes,
         settings.alertOnlyWhenActive, settings.minAlertIntervalMinutes, snooze.configuration(), snooze.clockShortcuts(),
-        runCatching { JsonParser.parseString(notes.getString("notes", "{}")).asJsonObject.entrySet().associate { it.key to it.value.asString } }.getOrDefault(emptyMap()))
+        runCatching { JsonParser.parseString(notes.getString("notes", "{}")).asJsonObject.entrySet().associate { it.key to it.value.asString } }.getOrDefault(emptyMap()),
+        settings.interactionGraceMinutes)
 
     fun exportToUri(uri: Uri) {
         val json = SettingsConfigurationCodec.encode(snapshot())
@@ -48,6 +49,7 @@ internal class SettingsTransferStore(private val context: Context) {
         settings.oldReminderRetentionMinutes = config.oldReminderRetentionMinutes
         settings.alertOnlyWhenActive = config.alertOnlyWhenActive
         settings.minAlertIntervalMinutes = config.minAlertIntervalMinutes
+        settings.interactionGraceMinutes = config.interactionGraceMinutes
         val json = JsonObject()
         config.discussions.forEach { (key, value) -> json.addProperty(key, value) }
         notes.edit().putString("notes", json.toString()).apply()

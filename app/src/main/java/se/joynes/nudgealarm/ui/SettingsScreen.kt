@@ -73,7 +73,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onAddPosition: (String, String, Double, Double, Int) -> Unit = { _, _, _, _, _ -> },
-    onSettingsImported: () -> Unit = {}
+    onSettingsImported: () -> Unit = {},
+    onSetInteractionGraceMinutes: (Int) -> Unit = {}
 ) {
     var showAllRingtones by remember { mutableStateOf(false) }
     var showPlaces by remember { mutableStateOf(false) }
@@ -434,6 +435,8 @@ fun SettingsScreen(
             }
 
             // === MIN ALERT INTERVAL ===
+            InteractionGraceSettings(uiState.interactionGraceMinutes, onSetInteractionGraceMinutes)
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

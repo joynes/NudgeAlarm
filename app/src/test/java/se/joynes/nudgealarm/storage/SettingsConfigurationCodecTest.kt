@@ -17,7 +17,7 @@ class SettingsConfigurationCodecTest {
         val json = SettingsConfigurationCodec.encode(config)
         assertEquals(config, SettingsConfigurationCodec.decode(json))
         val entries = JsonParser.parseString(json).asJsonObject["settings"].asJsonObject
-        assertEquals(15, entries.size())
+        assertEquals(16, entries.size())
         entries.entrySet().forEach { (_, value) ->
             val entry = value.asJsonObject
             assertTrue(entry.has("value") && entry.has("default") && entry.has("discussion"))
@@ -29,11 +29,19 @@ class SettingsConfigurationCodecTest {
 
     @Test fun editedConfigurationAndDiscussionNotesRoundTrip() {
         val config = SettingsConfiguration(alarmSound = "SILENT", vibrationEnabled = false,
-            oldReminderRetentionMinutes = 97, minAlertIntervalMinutes = 37, alertOnlyWhenActive = true,
+            oldReminderRetentionMinutes = 97, minAlertIntervalMinutes = 37, alertOnlyWhenActive = true, interactionGraceMinutes = 47,
             snooze = SnoozeConfiguration(listOf(10, 30, 97), 3, false, 0, 97, false, "clock"),
             clockShortcuts = listOf(SnoozeClockShortcut("lunch", "Lunch", 12, 30)),
             discussions = mapOf("adaptiveQuickPicks" to "Prefer predictable times while working."))
         assertEquals(config, SettingsConfigurationCodec.decode(SettingsConfigurationCodec.encode(config)))
+    }
+
+    @Test fun oldExportsUseDefaultGraceAndNewGraceIsStrictlyValidated() {
+        val root = JsonParser.parseString(SettingsConfigurationCodec.encode(SettingsConfiguration())).asJsonObject
+        root["settings"].asJsonObject.remove("interactionGraceMinutes")
+        assertEquals(15, SettingsConfigurationCodec.decode(root.toString()).interactionGraceMinutes)
+        listOf("-1", "10140", "15.5", "\"15\"", "null").forEach { rejects(changed("interactionGraceMinutes", it)) }
+        assertEquals(0, SettingsConfigurationCodec.decode(changed("interactionGraceMinutes", "0")).interactionGraceMinutes)
     }
 
     @Test fun commentsCannotOverrideBehaviorAndUnknownKeysAreRejected() {

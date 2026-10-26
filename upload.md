@@ -36,6 +36,10 @@ export ANDROID_SERIAL="emulator-5554"
 The debug build uses the separate package `se.joynes.nudgealarm.debug`, so running
 UI tests does not replace the installed release app.
 
+When no macOS desktop session is logged in, add `-no-window` to the emulator
+command to run the same UI tests headlessly. Play Console uploads through the
+signed-in Chrome session still require an available macOS desktop session.
+
 ## Build Release APK and Play App Bundle
 
 ```bash

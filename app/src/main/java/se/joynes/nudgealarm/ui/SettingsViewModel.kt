@@ -37,7 +37,8 @@ data class SettingsUiState(
     val minAlertIntervalMinutes: Int = 0,
     val savedPlaces: List<SavedPlaceWithLocations> = emptyList(),
     val linkedReminderCounts: Map<String, Int> = emptyMap(),
-    val placeError: String? = null
+    val placeError: String? = null,
+    val interactionGraceMinutes: Int = 15
 )
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -117,7 +118,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             customSoundName = settingsStore.customSoundName,
             oldReminderRetentionMinutes = settingsStore.oldReminderRetentionMinutes,
             alertOnlyWhenActive = settingsStore.alertOnlyWhenActive,
-            minAlertIntervalMinutes = settingsStore.minAlertIntervalMinutes
+            minAlertIntervalMinutes = settingsStore.minAlertIntervalMinutes,
+            interactionGraceMinutes = settingsStore.interactionGraceMinutes
         )
     }
 
@@ -145,6 +147,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setMinAlertIntervalMinutes(minutes: Int) {
         settingsStore.minAlertIntervalMinutes = minutes
         _uiState.value = _uiState.value.copy(minAlertIntervalMinutes = minutes)
+    }
+
+    fun setInteractionGraceMinutes(minutes: Int) {
+        settingsStore.interactionGraceMinutes = minutes
+        _uiState.value = _uiState.value.copy(interactionGraceMinutes = minutes)
     }
 
     private fun loadDeviceRingtones() {

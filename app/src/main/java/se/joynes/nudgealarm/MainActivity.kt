@@ -79,6 +79,12 @@ enum class Screen {
 }
 
 class MainActivity : ComponentActivity() {
+    private val attentionStore by lazy { se.joynes.nudgealarm.notification.ReminderAttentionStore(this) }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        attentionStore.recordInteraction()
+    }
     private var placeRequest by mutableStateOf<String?>(null)
 
     override fun onNewIntent(intent: Intent) {
@@ -89,6 +95,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        attentionStore.recordInteraction(force = true)
         // Re-evaluate permissions after returning from Android settings, without GPS polling.
         if (ReminderService.isRunning) startService(Intent(this, ReminderService::class.java)
             .setAction(ReminderService.ACTION_RELOAD))
@@ -583,6 +590,7 @@ fun NudgeAlarmApp(placeRequest: String? = null, onPlaceRequestConsumed: () -> Un
                 onSetOldReminderRetentionMinutes = { minutes -> settingsViewModel.setOldReminderRetentionMinutes(minutes) },
                 onToggleAlertOnlyWhenActive = { enabled -> settingsViewModel.setAlertOnlyWhenActive(enabled) },
                 onSetMinAlertIntervalMinutes = { minutes -> settingsViewModel.setMinAlertIntervalMinutes(minutes) },
+                onSetInteractionGraceMinutes = settingsViewModel::setInteractionGraceMinutes,
                 onRenamePlace = { id, name -> settingsViewModel.renamePlace(id, name) },
                 onUpdatePosition = { placeId, id, label, latitude, longitude, radius ->
                     settingsViewModel.updatePosition(placeId, id, label, latitude, longitude, radius)

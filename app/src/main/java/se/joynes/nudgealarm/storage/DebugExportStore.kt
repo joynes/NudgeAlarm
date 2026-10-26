@@ -82,6 +82,8 @@ internal class DebugExportStore(private val context: Context) {
                 val settings = SettingsStore(context)
                 addProperty("alertOnlyWhenActive", settings.alertOnlyWhenActive)
                 addProperty("minAlertIntervalMinutes", settings.minAlertIntervalMinutes)
+                addProperty("interactionGraceMinutes", settings.interactionGraceMinutes)
+                addProperty("lastAppInteractionAt", se.joynes.nudgealarm.notification.ReminderAttentionStore(context).lastInteractionAt)
                 addProperty("oldReminderRetentionMinutes", settings.oldReminderRetentionMinutes)
             })
             add("postedNotifications", JsonArray().apply {

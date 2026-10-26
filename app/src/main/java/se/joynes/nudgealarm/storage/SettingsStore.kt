@@ -201,6 +201,14 @@ class SettingsStore(context: Context) {
         get() = prefs.getInt(KEY_MIN_ALERT_INTERVAL_MINUTES, 0)
         set(value) = prefs.edit().putInt(KEY_MIN_ALERT_INTERVAL_MINUTES, value).apply()
 
+    /** Quiet repeat alerts after the user has opened or interacted with NudgeAlarm. */
+    var interactionGraceMinutes: Int
+        get() = prefs.getInt("interaction_grace_minutes", 15)
+        set(value) {
+            require(value in 0..10139)
+            prefs.edit().putInt("interaction_grace_minutes", value).apply()
+        }
+
     /**
      * Get the effective sound URI to use for notifications.
      * Returns custom sound if set, otherwise the selected AlarmSound's URI.
