@@ -40,6 +40,15 @@ When no macOS desktop session is logged in, add `-no-window` to the emulator
 command to run the same UI tests headlessly. Play Console uploads through the
 signed-in Chrome session still require an available macOS desktop session.
 
+On a fresh emulator, enable **Settings → Location → Location services → Location
+Accuracy → Improve Location Accuracy** before the geofence integration test.
+It needs Google Play services' network location provider as well as the main
+Location switch. A simulated position can be supplied with `adb emu geo fix 18.0 59.3`.
+
+If the existing emulator disk is full, add `-data /tmp/nudgealarm-ui-test.img
+-partition-size 8192 -no-snapshot` to use a separate clean test disk while keeping
+the original AVD data.
+
 ## Build Release APK and Play App Bundle
 
 ```bash
