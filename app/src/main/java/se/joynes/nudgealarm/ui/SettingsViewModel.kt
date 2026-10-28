@@ -38,7 +38,8 @@ data class SettingsUiState(
     val savedPlaces: List<SavedPlaceWithLocations> = emptyList(),
     val linkedReminderCounts: Map<String, Int> = emptyMap(),
     val placeError: String? = null,
-    val interactionGraceMinutes: Int = 15
+    val interactionGraceMinutes: Int = 15,
+    val interactionGraceSource: String = "unlock"
 )
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -119,7 +120,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             oldReminderRetentionMinutes = settingsStore.oldReminderRetentionMinutes,
             alertOnlyWhenActive = settingsStore.alertOnlyWhenActive,
             minAlertIntervalMinutes = settingsStore.minAlertIntervalMinutes,
-            interactionGraceMinutes = settingsStore.interactionGraceMinutes
+            interactionGraceMinutes = settingsStore.interactionGraceMinutes,
+            interactionGraceSource = settingsStore.interactionGraceSource
         )
     }
 
@@ -152,6 +154,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setInteractionGraceMinutes(minutes: Int) {
         settingsStore.interactionGraceMinutes = minutes
         _uiState.value = _uiState.value.copy(interactionGraceMinutes = minutes)
+    }
+
+    fun setInteractionGraceSource(source: String) {
+        settingsStore.interactionGraceSource = source
+        _uiState.value = _uiState.value.copy(interactionGraceSource = source)
     }
 
     private fun loadDeviceRingtones() {

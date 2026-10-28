@@ -74,7 +74,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onAddPosition: (String, String, Double, Double, Int) -> Unit = { _, _, _, _, _ -> },
     onSettingsImported: () -> Unit = {},
-    onSetInteractionGraceMinutes: (Int) -> Unit = {}
+    onSetInteractionGraceMinutes: (Int) -> Unit = {},
+    onSetInteractionGraceSource: (String) -> Unit = {}
 ) {
     var showAllRingtones by remember { mutableStateOf(false) }
     var showPlaces by remember { mutableStateOf(false) }
@@ -435,7 +436,8 @@ fun SettingsScreen(
             }
 
             // === MIN ALERT INTERVAL ===
-            InteractionGraceSettings(uiState.interactionGraceMinutes, onSetInteractionGraceMinutes)
+            InteractionGraceSettings(uiState.interactionGraceMinutes, onSetInteractionGraceMinutes,
+                uiState.interactionGraceSource, onSetInteractionGraceSource)
 
             Card(
                 modifier = Modifier

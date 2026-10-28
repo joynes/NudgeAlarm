@@ -209,6 +209,13 @@ class SettingsStore(context: Context) {
             prefs.edit().putInt("interaction_grace_minutes", value).apply()
         }
 
+    var interactionGraceSource: String
+        get() = prefs.getString("interaction_grace_source", "unlock") ?: "unlock"
+        set(value) {
+            require(value in setOf("app", "unlock", "usage"))
+            prefs.edit().putString("interaction_grace_source", value).apply()
+        }
+
     /**
      * Get the effective sound URI to use for notifications.
      * Returns custom sound if set, otherwise the selected AlarmSound's URI.

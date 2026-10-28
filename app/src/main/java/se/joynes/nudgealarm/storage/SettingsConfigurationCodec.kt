@@ -18,7 +18,8 @@ internal data class SettingsConfiguration(
     val snooze: SnoozeConfiguration = SnoozeConfiguration(),
     val clockShortcuts: List<SnoozeClockShortcut> = emptyList(),
     val discussions: Map<String, String> = emptyMap(),
-    val interactionGraceMinutes: Int = 15
+    val interactionGraceMinutes: Int = 15,
+    val interactionGraceSource: String = "unlock"
 )
 
 /** Explicit field names avoid reflection/obfuscation changing the editable file format. */
@@ -27,7 +28,7 @@ internal object SettingsConfigurationCodec {
     private val keys = setOf("alarmSound", "vibrationEnabled", "customSoundUri", "customSoundName",
         "oldReminderRetentionMinutes", "alertOnlyWhenActive", "minAlertIntervalMinutes",
         "durationPresetsMinutes", "quickPickCount", "adaptiveQuickPicks", "recentCount",
-        "defaultDurationMinutes", "rememberLastDuration", "defaultSnoozeMode", "clockShortcuts", "interactionGraceMinutes")
+        "defaultDurationMinutes", "rememberLastDuration", "defaultSnoozeMode", "clockShortcuts", "interactionGraceMinutes", "interactionGraceSource")
 
     fun encode(config: SettingsConfiguration): String {
         val settings = JsonObject()
@@ -59,8 +60,11 @@ internal object SettingsConfigurationCodec {
         field("minAlertIntervalMinutes", number(config.minAlertIntervalMinutes), number(0),
             "Global minimum interval between audible/vibrating alerts, regardless of an individual quest's nag interval. Does not change quest schedules or snooze duration.", "Integer 0..10080 minutes; 0 means no additional cooldown", "60 = alert at most once per hour.")
         field("interactionGraceMinutes", number(config.interactionGraceMinutes), number(15),
-            "Quiet repeated sound, vibration and heads-up alerts for existing reminders after opening or interacting with NudgeAlarm. Each interaction renews this period. Reminders remain visible and are not completed or snoozed. New reminders and a snooze ending after the interaction can still alert. The last interaction timestamp is device-local and is never imported.",
+            "Quiet repeat sound, vibration and heads-up alerts after detected use of the phone. Applies only to reminder occurrences already delivered before that use. A new occurrence or resumed explicit snooze must be delivered and followed by another use to receive a break. Reminders remain visible. Each detected use renews the break. Last-use and delivery timestamps are device-local and never imported.",
             "Integer 0..10139 minutes; 0 disables this grace period", "15 gives a quarter-hour break after using the app; 30 gives half an hour.")
+        field("interactionGraceSource", JsonPrimitive(config.interactionGraceSource), JsonPrimitive("unlock"),
+            "What counts as phone use for the automatic break: app = NudgeAlarm interactions only; unlock = phone unlocks plus NudgeAlarm; usage = unlocks plus Android-reported interaction in any app. Usage mode requires optional Android Usage access, checked before each nag; without access it falls back to unlocks. Android may not report every touch. Import never grants permissions and no app names or usage history are exported.",
+            "app, unlock or usage", "unlock needs no special permission; usage also detects use inside other apps after access is explicitly enabled.")
         val snooze = config.snooze
         field("durationPresetsMinutes", gson.toJsonTree(snooze.durationPresets.sorted()), gson.toJsonTree(DEFAULT_SNOOZE_PRESETS),
             "Duration shortcuts shared by quest snooze and pause-all. Sorted shortest first. In fixed mode these are the only Quick Picks; adaptive mode may replace choices with learned durations. Removing a preset does not delete recent history.",
@@ -99,7 +103,7 @@ internal object SettingsConfigurationCodec {
         val root = JsonParser.parseString(text).asJsonObject
         require(root["format"]?.asString == "nudgealarm-settings" && root["version"]?.toString() == "1") { "Unsupported settings format/version" }
         val entries = root["settings"]?.asJsonObject ?: error("Missing settings object")
-        val requiredKeys = keys - "interactionGraceMinutes" // Accept settings exported before this option existed.
+        val requiredKeys = keys - setOf("interactionGraceMinutes", "interactionGraceSource")
         require(entries.keySet().containsAll(requiredKeys) && keys.containsAll(entries.keySet())) { "Settings keys must match the export: missing ${requiredKeys - entries.keySet()}, unknown ${entries.keySet() - keys}" }
         fun value(key: String): JsonElement = entries[key].asJsonObject["value"] ?: error("Missing value for $key")
         fun integer(element: JsonElement, key: String): Int {
@@ -132,9 +136,11 @@ internal object SettingsConfigurationCodec {
         val notes = entries.keySet().associateWith { key ->
             entries[key].asJsonObject["discussion"]?.let { string(it, "$key.discussion") }.orEmpty().also { require(it.length <= 4000) { "Discussion for $key exceeds 4000 characters" } }
         }
+        val source = if (entries.has("interactionGraceSource")) string(value("interactionGraceSource"), "interactionGraceSource") else "unlock"
+        require(source in setOf("app", "unlock", "usage")) { "Unknown interactionGraceSource" }
         return SettingsConfiguration(sound, bool("vibrationEnabled"), uri, name, int("oldReminderRetentionMinutes", 1..10080),
             bool("alertOnlyWhenActive"), int("minAlertIntervalMinutes", 0..10080), config, clocks, notes.filterValues { it.isNotEmpty() },
-            if (entries.has("interactionGraceMinutes")) int("interactionGraceMinutes", 0..10139) else 15)
+            if (entries.has("interactionGraceMinutes")) int("interactionGraceMinutes", 0..10139) else 15, source)
     }
 
     fun changes(before: SettingsConfiguration, after: SettingsConfiguration): List<String> {

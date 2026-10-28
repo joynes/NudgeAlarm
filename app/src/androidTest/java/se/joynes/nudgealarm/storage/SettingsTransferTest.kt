@@ -26,7 +26,7 @@ class SettingsTransferTest {
         snooze.saveClockShortcut("old", "Old", 9, 0)
         val store = SettingsTransferStore(context)
         val incoming = SettingsConfiguration(vibrationEnabled = false, oldReminderRetentionMinutes = 90,
-            minAlertIntervalMinutes = 37, interactionGraceMinutes = 47, snooze = SnoozeConfiguration(listOf(5, 25), 2, false, 0, 25, false, "clock"),
+            minAlertIntervalMinutes = 37, interactionGraceMinutes = 47, interactionGraceSource = "usage", snooze = SnoozeConfiguration(listOf(5, 25), 2, false, 0, 25, false, "clock"),
             clockShortcuts = listOf(SnoozeClockShortcut("lunch", "Lunch", 12, 0)), discussions = mapOf("recentCount" to "Hide distractions"))
         store.apply(incoming)
         assertEquals(incoming, store.snapshot())

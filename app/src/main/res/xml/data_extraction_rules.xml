@@ -5,6 +5,7 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="reminder_attention.xml"/>
         <exclude domain="sharedpref" path="geofence_state.xml"/>
         <exclude domain="sharedpref" path="geofence_diagnostics.xml"/>
         <include domain="sharedpref" path="."/>
@@ -12,6 +13,7 @@
         <include domain="file" path="."/>
     </cloud-backup>
     <device-transfer>
+        <exclude domain="sharedpref" path="reminder_attention.xml"/>
         <exclude domain="sharedpref" path="geofence_state.xml"/>
         <exclude domain="sharedpref" path="geofence_diagnostics.xml"/>
         <include domain="sharedpref" path="."/>

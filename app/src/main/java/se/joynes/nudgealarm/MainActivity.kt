@@ -591,6 +591,7 @@ fun NudgeAlarmApp(placeRequest: String? = null, onPlaceRequestConsumed: () -> Un
                 onToggleAlertOnlyWhenActive = { enabled -> settingsViewModel.setAlertOnlyWhenActive(enabled) },
                 onSetMinAlertIntervalMinutes = { minutes -> settingsViewModel.setMinAlertIntervalMinutes(minutes) },
                 onSetInteractionGraceMinutes = settingsViewModel::setInteractionGraceMinutes,
+                onSetInteractionGraceSource = settingsViewModel::setInteractionGraceSource,
                 onRenamePlace = { id, name -> settingsViewModel.renamePlace(id, name) },
                 onUpdatePosition = { placeId, id, label, latitude, longitude, radius ->
                     settingsViewModel.updatePosition(placeId, id, label, latitude, longitude, radius)

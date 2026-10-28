@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import se.joynes.nudgealarm.core.config.AppConfig
 import se.joynes.nudgealarm.core.config.ReminderConfig
 import se.joynes.nudgealarm.core.cron.CronExpression
@@ -95,6 +96,8 @@ class ReminderService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var schedulerJob: Job? = null
     private var quietModeJob: Job? = null
+    private val notificationMutex = kotlinx.coroutines.sync.Mutex()
+    private lateinit var phoneUseMonitor: se.joynes.nudgealarm.notification.PhoneUseMonitor
 
     private lateinit var eventLog: EventLogStore
     private lateinit var configLoader: ConfigLoader
@@ -125,6 +128,9 @@ class ReminderService : Service() {
         reminderRepository = ReminderRepository(database.reminderDao())
         savedPlaceRepository = SavedPlaceRepository(database.savedPlaceDao())
         geofenceMonitor = GeofenceMonitor(this, savedPlaceRepository)
+        phoneUseMonitor = se.joynes.nudgealarm.notification.PhoneUseMonitor(this) {
+            if (isRunning) serviceScope.launch { refreshCombinedNotification() }
+        }
 
         ChannelSetup.createChannels(this)
         eventLog.add(Event.Debug(detail = "ReminderService.onCreate() - channels created, database initialized"))
@@ -216,6 +222,7 @@ class ReminderService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        phoneUseMonitor.stop()
         serviceScope.cancel()
         isRunning = false
         eventLog.add(Event.ServiceStopped(reason = "onDestroy"))
@@ -229,6 +236,7 @@ class ReminderService : Service() {
         eventLog.add(Event.ServiceStarted())
 
         startReminderForeground()
+        phoneUseMonitor.start()
         scheduleQuietModeExpiry()
 
         // Resume any active nags from previous run
@@ -638,8 +646,9 @@ class ReminderService : Service() {
         notificationManager.notify(ReminderNotification.SERVICE_NOTIFICATION_ID, notification)
     }
 
-    private suspend fun refreshCombinedNotification(silent: Boolean = false) {
+    private suspend fun refreshCombinedNotification(silent: Boolean = false) = notificationMutex.withLock {
         val now = System.currentTimeMillis()
+        phoneUseMonitor.collectRecentUsage(now)
 
         // Suppress when screen is off and "active only" is enabled
         val screenSilent = settingsStore.alertOnlyWhenActive && !powerManager.isInteractive
@@ -672,10 +681,11 @@ class ReminderService : Service() {
         val activeNags = dueNags.filter { nag ->
             notificationAllowed(nag.ruleId, rules, ::locationAllows)
         }
-        val lastInteraction = se.joynes.nudgealarm.notification.ReminderAttentionStore(this).lastInteractionAt
+        val attention = se.joynes.nudgealarm.notification.ReminderAttentionStore(this)
+        val lastInteraction = attention.lastInteractionAt
         val interactionSilent = activeNags.isNotEmpty() && activeNags.all { nag ->
             se.joynes.nudgealarm.notification.repeatAlertAcknowledged(
-                nag.triggeredAt, nag.snoozedUntil, lastInteraction, settingsStore.interactionGraceMinutes, now)
+                attention.firstPresentedAt(nag), nag.snoozedUntil, lastInteraction, settingsStore.interactionGraceMinutes, now)
         }
         val effectiveSilent = silent || screenSilent || rateLimited || interactionSilent
         if (!effectiveSilent && activeNags.isNotEmpty()) lastAlertTimeMs = now
@@ -694,6 +704,7 @@ class ReminderService : Service() {
                 unboundRuleIds = rules.values.filter { it.placeId == null }.map { it.id }.toSet())
             notificationManager.notify(ReminderNotification.COMBINED_NOTIFICATION_ID, notification)
         }
+        attention.recordPresentations(activeNags, allNags, System.currentTimeMillis())
 
         // Update activeReminders map for UI
         activeReminders.clear()

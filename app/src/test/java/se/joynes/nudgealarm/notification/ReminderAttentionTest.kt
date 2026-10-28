@@ -34,4 +34,15 @@ class ReminderAttentionTest {
         assertFalse(repeatAlertAcknowledged(1, null, 0, 15, seen))
         assertFalse(repeatAlertAcknowledged(seen - 1, null, seen, 15, seen - 1))
     }
+
+    @Test fun activityBeforeDeliveryAndAScreenWakeCannotAcknowledgeANewReminder() {
+        assertFalse(repeatAlertAcknowledged(null, null, seen, 15, seen + 60_000))
+        assertFalse(repeatAlertAcknowledged(seen, null, seen, 15, seen + 60_000))
+        assertFalse(repeatAlertAcknowledged(seen + 1, null, seen, 15, seen + 60_000))
+        assertTrue(repeatAlertAcknowledged(seen, null, seen + 1, 15, seen + 60_000))
+        assertFalse(PhoneUseMonitor.isPhoneUseEvent(android.app.usage.UsageEvents.Event.SCREEN_INTERACTIVE))
+        assertFalse(PhoneUseMonitor.isPhoneUseEvent(android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED))
+        assertTrue(PhoneUseMonitor.isPhoneUseEvent(android.app.usage.UsageEvents.Event.USER_INTERACTION))
+        assertTrue(PhoneUseMonitor.isPhoneUseEvent(android.app.usage.UsageEvents.Event.KEYGUARD_HIDDEN))
+    }
 }
