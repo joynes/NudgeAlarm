@@ -50,6 +50,7 @@ internal class PhoneUseMonitor(
     fun collectRecentUsage(now: Long) {
         if (settings.interactionGraceSource != "usage" || settings.interactionGraceMinutes == 0 || !usageAccessAllowed()) return
         val start = maxOf(now - settings.interactionGraceMinutes * 60_000L, lastQueryAt.takeIf { it <= now } ?: 0L)
+        if (start >= now) return
         try {
             val latest = queryLatestUse(start, now) ?: return
             if (latest in start..now && latest > attention.lastInteractionAt) attention.recordInteraction(latest, force = true)

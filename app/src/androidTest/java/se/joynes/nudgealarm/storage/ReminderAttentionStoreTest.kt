@@ -131,6 +131,8 @@ class ReminderAttentionStoreTest {
             monitor.collectRecentUsage(4000)
             assertEquals(3000L, attention.lastInteractionAt)
             assertEquals(listOf(0L to 4000L), windows)
+            monitor.collectRecentUsage(4000) // Two refreshes in one millisecond must not query an empty range.
+            assertEquals(1, windows.size)
             reported = 2500 // History before the previous query must not renew a break.
             monitor.collectRecentUsage(5000)
             assertEquals(3000L, attention.lastInteractionAt)
