@@ -93,6 +93,10 @@ interface NagStateDao {
     @Query("UPDATE nag_states SET status = 'SNOOZED', snoozedUntil = :until, snoozeCount = snoozeCount + 1 WHERE occurrenceKey = :key")
     suspend fun snooze(key: String, until: Long)
 
+    /** A quest action must cover all its still-pending occurrences, including old sticky ones. */
+    @Query("UPDATE nag_states SET status = 'SNOOZED', snoozedUntil = :until, snoozeCount = snoozeCount + 1 WHERE ruleId = :ruleId AND status IN ('ACTIVE', 'SNOOZED')")
+    suspend fun snoozeAllByRuleId(ruleId: String, until: Long)
+
     /**
      * Clear snooze and set back to active.
      */

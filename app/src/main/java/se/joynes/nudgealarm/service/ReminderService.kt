@@ -669,7 +669,8 @@ class ReminderService : Service() {
             }
         }
 
-        val dueNags = allNags.filter {
+        val currentNags = se.joynes.nudgealarm.database.currentNagStates(allNags, now)
+        val dueNags = currentNags.filter {
             it.status == NagStatus.ACTIVE.name ||
             (it.status == NagStatus.SNOOZED.name && (it.snoozedUntil ?: Long.MAX_VALUE) <= now)
         }
@@ -708,7 +709,7 @@ class ReminderService : Service() {
 
         // Update activeReminders map for UI
         activeReminders.clear()
-        for (nag in allNags) {
+        for (nag in currentNags) {
             activeReminders[nag.ruleId] = ActiveReminder(
                 ruleId = nag.ruleId,
                 title = nag.title,

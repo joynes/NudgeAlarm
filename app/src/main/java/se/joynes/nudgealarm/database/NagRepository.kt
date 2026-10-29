@@ -134,15 +134,15 @@ class NagRepository(private val dao: NagStateDao) {
     }
 
     /**
-     * Snooze by ruleId (finds active occurrence for that rule).
-     * Returns the occurrence key if found.
+     * Snooze every pending occurrence for the quest to the same deadline.
+     * Returns the newest pending occurrence key if found.
      */
     suspend fun snoozeByRuleId(ruleId: String, duration: Duration): String? {
         val activeNags = dao.getActiveNags()
         val nag = activeNags.find { it.ruleId == ruleId }
         if (nag != null) {
             val until = System.currentTimeMillis() + duration.inWholeMilliseconds
-            dao.snooze(nag.occurrenceKey, until)
+            dao.snoozeAllByRuleId(ruleId, until)
             return nag.occurrenceKey
         }
         return null

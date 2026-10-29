@@ -1575,7 +1575,7 @@ private fun ActiveQuestCard(
             }
             if (wasSnoozed) {
                 Text(
-                    text = "Snoozed ${reminder.snoozeCount}x",
+                    text = "Previously snoozed ${reminder.snoozeCount}x",
                     style = MaterialTheme.typography.labelSmall,
                     color = MegadrivePurple
                 )

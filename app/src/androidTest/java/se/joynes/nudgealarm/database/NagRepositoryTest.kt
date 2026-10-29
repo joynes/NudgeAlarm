@@ -16,6 +16,26 @@ import kotlin.time.Duration.Companion.minutes
 @RunWith(AndroidJUnit4::class)
 class NagRepositoryTest {
 
+    @Test fun snoozingAQuestPausesAllPendingOccurrencesAndCanShortenThePause() = runTest {
+        val rule = createTestRule()
+        val (_, oldKey) = repository.tryFire(rule, 1000)
+        val (_, newKey) = repository.tryFire(rule, 2000)
+        val (_, doneKey) = repository.tryFire(rule, 500)
+        repository.markDone(doneKey)
+        val (_, otherKey) = repository.tryFire(rule.copy(id = "other"), 1000)
+        repository.snoozeByRuleId(rule.id, 60.minutes)
+        val paused = database.nagStateDao().getByRuleId(rule.id).filter { it.status == "SNOOZED" }
+        assertEquals(setOf(oldKey, newKey), paused.map { it.occurrenceKey }.toSet())
+        assertEquals(1, paused.map { it.snoozedUntil }.distinct().size)
+        assertEquals("COMPLETED", repository.getByKey(doneKey)!!.status)
+        assertEquals("ACTIVE", repository.getByKey(otherKey)!!.status)
+        val originalDeadline = paused.first().snoozedUntil!!
+        repository.snoozeByRuleId(rule.id, 5.minutes)
+        val shortened = database.nagStateDao().getByRuleId(rule.id).filter { it.status == "SNOOZED" }
+        assertTrue(shortened.all { it.snoozedUntil!! < originalDeadline && it.snoozeCount == 2 })
+        assertEquals(1, shortened.map { it.snoozedUntil }.distinct().size)
+    }
+
     private lateinit var database: NagDatabase
     private lateinit var repository: NagRepository
 
