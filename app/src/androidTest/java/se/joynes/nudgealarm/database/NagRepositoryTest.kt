@@ -16,6 +16,52 @@ import kotlin.time.Duration.Companion.minutes
 @RunWith(AndroidJUnit4::class)
 class NagRepositoryTest {
 
+    @Test fun bulkOutcomesAreRecordedOncePerQuestAndAppearInEveryAggregate() = runTest {
+        val rule = createTestRule()
+        repository.tryFire(rule, 1000)
+        repository.tryFire(rule, 2000)
+        repository.tryFire(rule.copy(id = "abandoned"), 1000)
+        database.finishPendingQuests(listOf(rule.id, rule.id), NagStatus.COMPLETED)
+        database.finishPendingQuests(listOf(rule.id, "abandoned"), NagStatus.CANCELLED)
+        database.finishPendingQuests(listOf("abandoned"), NagStatus.CANCELLED)
+        val now = System.currentTimeMillis() + 1
+        assertEquals(2, database.nagHistoryDao().getAll().size)
+        assertEquals(OutcomeCounts(1, 0, 1), database.nagHistoryDao().getOutcomeCounts(0, now))
+        assertEquals(1, database.nagHistoryDao().getDailyAggregates(0, now).sumOf { it.cancelled })
+        assertEquals(1, database.nagHistoryDao().getStatsByRule(0, now).sumOf { it.completedCount })
+    }
+
+    @Test fun expiryWritesHistoryExactlyOnceAndProtectsStickyAndPausedQuests() = runTest {
+        val rule = createTestRule()
+        database.reminderDao().insert(ReminderEntity.fromReminderConfig(rule))
+        database.reminderDao().insert(ReminderEntity.fromReminderConfig(rule.copy(id = "sticky", sticky = true)))
+        val (_, stale) = repository.tryFire(rule, 1000)
+        val (_, otherStale) = repository.tryFire(rule, 2000)
+        val (_, sticky) = repository.tryFire(rule.copy(id = "sticky"), 1000)
+        val (_, paused) = repository.tryFire(rule.copy(id = "paused"), 1000)
+        val (_, pausedOlder) = repository.tryFire(rule.copy(id = "paused"), 500)
+        val (_, fresh) = repository.tryFire(rule.copy(id = "fresh"), 1000)
+        val (_, done) = repository.tryFire(rule.copy(id = "done"), 1000)
+        val now = System.currentTimeMillis()
+        for (key in listOf(stale, otherStale, sticky, paused, pausedOlder, done)) {
+            database.nagStateDao().update(repository.getByKey(key)!!.copy(triggeredAt = now - 100_000))
+        }
+        repository.snooze(paused, now + 100_000)
+        repository.markDone(done)
+        assertEquals(listOf(rule.id), database.expireStaleReminders(now - 50_000, now))
+        assertTrue(database.expireStaleReminders(now - 50_000, now).isEmpty())
+        val history = database.nagHistoryDao().getAll()
+        assertEquals(2, history.size)
+        assertTrue(history.all { it.outcome == "EXPIRED" && it.completedAt == now })
+        assertEquals(2, database.nagHistoryDao().getOutcomeCounts(0, now + 1)!!.expired)
+        assertEquals(2, database.nagHistoryDao().getDailyAggregates(0, now + 1).sumOf { it.expired })
+        assertEquals("ACTIVE", repository.getByKey(sticky)!!.status)
+        assertEquals("SNOOZED", repository.getByKey(paused)!!.status)
+        assertEquals("ACTIVE", repository.getByKey(pausedOlder)!!.status)
+        assertEquals("ACTIVE", repository.getByKey(fresh)!!.status)
+        assertEquals("COMPLETED", repository.getByKey(done)!!.status)
+    }
+
     @Test fun snoozingAQuestPausesAllPendingOccurrencesAndCanShortenThePause() = runTest {
         val rule = createTestRule()
         val (_, oldKey) = repository.tryFire(rule, 1000)

@@ -19,6 +19,9 @@ import se.joynes.nudgealarm.core.config.ReminderConfig
 import se.joynes.nudgealarm.core.cron.CronExpression
 import se.joynes.nudgealarm.core.event.Event
 import se.joynes.nudgealarm.database.NagDatabase
+import se.joynes.nudgealarm.database.expireStaleReminders
+import se.joynes.nudgealarm.database.finishPendingQuests
+import se.joynes.nudgealarm.database.NagStatus
 import se.joynes.nudgealarm.database.NagRepository
 import se.joynes.nudgealarm.database.ReminderRepository
 import se.joynes.nudgealarm.service.ReminderService
@@ -145,25 +148,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Auto-expires old ACTIVE nags unless their reminder is sticky. */
     private suspend fun cleanupStaleActiveReminders() {
-        val cutoff = System.currentTimeMillis() -
+        val now = System.currentTimeMillis()
+        val cutoff = now -
             settingsStore.oldReminderRetentionMinutes * 60_000L
-
-        val staleRuleIds = ReminderService.activeReminders.values
-            .filter { it.triggeredAt < cutoff }
-            .filter { active ->
-                val rule = ReminderService.currentConfig?.reminders?.find { it.id == active.ruleId }
-                rule?.sticky != true
-            }
-            .map { it.ruleId }
-
+        val staleRuleIds = withContext(Dispatchers.IO) {
+            NagDatabase.getInstance(getApplication()).expireStaleReminders(cutoff, now)
+        }
         if (staleRuleIds.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
-                for (ruleId in staleRuleIds) {
-                    val key = nagRepository.getActiveOccurrenceKeyForRule(ruleId)
-                    if (key != null) nagRepository.markExpired(key)
+            staleRuleIds.forEach { ruleId ->
+                if ((ReminderService.activeReminders[ruleId]?.triggeredAt ?: Long.MAX_VALUE) < cutoff) {
+                    ReminderService.activeReminders.remove(ruleId)
                 }
             }
-            staleRuleIds.forEach { ReminderService.activeReminders.remove(it) }
             eventLogStore.add(Event.Debug(detail = "Auto-expired ${staleRuleIds.size} stale reminder(s) from previous day"))
         }
     }
@@ -605,9 +601,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             // Mark all done directly in DB
             withContext(Dispatchers.IO) {
-                for (ruleId in ruleIds) {
-                    nagRepository.markDoneByRuleId(ruleId)
-                }
+                NagDatabase.getInstance(getApplication()).finishPendingQuests(ruleIds, NagStatus.COMPLETED)
             }
             // Clear active reminders immediately for instant UI update
             ruleIds.forEach { ReminderService.activeReminders.remove(it) }
@@ -625,9 +619,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             // Cancel all directly in DB
             withContext(Dispatchers.IO) {
-                for (ruleId in ruleIds) {
-                    nagRepository.markCancelledByRuleId(ruleId)
-                }
+                NagDatabase.getInstance(getApplication()).finishPendingQuests(ruleIds, NagStatus.CANCELLED)
             }
             // Clear active reminders immediately for instant UI update
             ruleIds.forEach { ReminderService.activeReminders.remove(it) }
