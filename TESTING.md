@@ -10,6 +10,7 @@ still uses the existing local signing configuration.
 ```sh
 export JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home'
 export ANDROID_SERIAL=emulator-5556 # Select your own test emulator explicitly.
+python3 -m unittest discover -s scripts -p 'test_*.py'
 ./gradlew combinedDebugCoverage
 python3 scripts/check_coverage.py app/build/reports/jacoco/combinedDebugCoverage/combinedDebugCoverage.xml --minimum 95
 ```
@@ -36,8 +37,18 @@ Use a separate AVD when another project uses the default emulator. Do not reset
 or uninstall another project's app to obtain disk space. Release and debug apps
 have separate package IDs.
 
-## Current status
+## Verified baseline
 
-Coverage instrumentation and CI were added in November 2026. The existence of
-the 95% gate does **not** mean the target has been achieved. The generated report
-and the matching GitHub run are the evidence; a red gate is an unmet target.
+On 2026-11-04, version 1.173 passed all 291 JVM tests, all 246 emulator tests
+and all 3 tests of the coverage gate, with no skipped tests. Combined whole-app
+line coverage was **95.32% (8,694 / 9,121 executable lines)**. The signed release
+APK and AAB built successfully; the release APK was also installed and cold
+started on the separate emulator.
+
+The gate tests check the real script: exactly 95% passes, 94.999% fails despite
+rounding to 95.00% for display, and a report without executable lines fails.
+Remaining uncovered lines stay in the denominator. The gate is applied afresh
+on every run; this baseline does not exempt later changes.
+
+See [GitHub Actions](https://github.com/joynes/NudgeAlarm/actions/workflows/tests.yml)
+for the actual job result and downloadable HTML/XML coverage and test reports.
