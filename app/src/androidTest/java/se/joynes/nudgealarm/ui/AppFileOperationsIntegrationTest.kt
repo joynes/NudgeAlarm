@@ -37,7 +37,7 @@ class AppFileOperationsIntegrationTest(private val operation: String) {
         @JvmStatic @Parameterized.Parameters(name = "{0}") fun operations() = listOf(
             "save_yaml", "load_yaml", "backup", "debug_report", "settings_export", "selected_export",
             "restore_backup", "restore_invalid", "copy_yaml", "paste_yaml", "rename", "share_yaml",
-            "settings_import", "settings_invalid"
+            "settings_import", "settings_invalid", "pause_all"
         ).map { arrayOf(it) }
     }
     @get:Rule val compose = createComposeRule()
@@ -54,6 +54,15 @@ class AppFileOperationsIntegrationTest(private val operation: String) {
         val appState = AppStateStore(context)
         val transfer = SettingsTransferStore(context)
         val originalSettings = transfer.snapshot()
+        val quiet = SettingsStore(context).quietMode
+        val quietUntil = SettingsStore(context).quietModeUntil
+        if (operation == "pause_all") {
+            SettingsStore(context).quietMode = false
+            SnoozePreferences(context).apply {
+                saveConfiguration(originalSettings.snooze.copy(durationPresets = listOf(15), adaptive = false, defaultMode = "duration"))
+                replaceClockShortcuts(emptyList())
+            }
+        }
         val previousId = appState.getCurrentGameId()
         val previousName = appState.getCurrentGameName()
         val previousRunning = appState.wasServiceRunning()
@@ -96,6 +105,10 @@ class AppFileOperationsIntegrationTest(private val operation: String) {
             } }
             compose.waitUntil(10000) { compose.onAllNodesWithText(">> GAME LOADED").fetchSemanticsNodes().isNotEmpty() }
             when (operation) {
+                "pause_all" -> {
+                    compose.onNodeWithContentDescription("Mute").performClick()
+                    compose.onNodeWithTag("quick_pick_15").performScrollTo().performClick()
+                }
                 "selected_export" -> {
                     click("EDIT"); click("SELECT")
                     compose.onNodeWithTag("select_file_fixture").performClick()
@@ -143,7 +156,13 @@ class AppFileOperationsIntegrationTest(private val operation: String) {
                     }
                 }
             }
-            if (operation == "settings_import") {
+            if (operation == "pause_all") {
+                compose.waitUntil(15000) { SettingsStore(context).quietMode && SettingsStore(context).quietModeUntil > System.currentTimeMillis() }
+                assertTrue(SettingsStore(context).quietModeUntil - System.currentTimeMillis() in 14 * 60000L..15 * 60000L)
+                compose.onNodeWithContentDescription("Unmute").performClick()
+                assertFalse(SettingsStore(context).quietMode)
+                assertEquals(0L, SettingsStore(context).quietModeUntil)
+            } else if (operation == "settings_import") {
                 compose.waitUntil(15000) { compose.onAllNodesWithText("REVIEW SETTINGS IMPORT").fetchSemanticsNodes().isNotEmpty() }
                 assertEquals(originalSettings, transfer.snapshot())
                 click("CANCEL")
@@ -205,6 +224,11 @@ class AppFileOperationsIntegrationTest(private val operation: String) {
             appState.setCurrentGame(previousId, previousName)
             appState.setServiceWasRunning(previousRunning)
             transfer.apply(originalSettings)
+            if (operation == "pause_all") {
+                se.joynes.nudgealarm.notification.QuietModeController.disable(context, refreshService = false)
+                SettingsStore(context).quietMode = quiet
+                SettingsStore(context).quietModeUntil = quietUntil
+            }
             input.delete(); output.delete()
             if (oldInternal != null) internal.writeBytes(oldInternal) else internal.delete()
         }

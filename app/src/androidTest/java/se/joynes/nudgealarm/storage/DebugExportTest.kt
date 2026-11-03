@@ -17,6 +17,7 @@ import se.joynes.nudgealarm.location.GeofenceSpec
 @RunWith(AndroidJUnit4::class)
 class DebugExportTest {
     private val context = object : android.content.ContextWrapper(ApplicationProvider.getApplicationContext<Context>()) {
+        override fun getApplicationContext(): Context = this
         override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences =
             super.getSharedPreferences("debug_export_test_$name", mode)
     }
