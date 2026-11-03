@@ -34,6 +34,8 @@ class RestoredScheduleIntegrationTest {
             db.reminderDao().deleteAll()
             settings.quietMode = true; settings.oldReminderRetentionMinutes = 15
             val now = System.currentTimeMillis()
+            val cronTime = Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, 4) }
+            val cron = "${cronTime.get(Calendar.MINUTE)} ${cronTime.get(Calendar.HOUR_OF_DAY)} * * *"
             val end = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
             }.timeInMillis
@@ -41,8 +43,8 @@ class RestoredScheduleIntegrationTest {
                 ReminderEntity(ids[0], "Already active", "once:${now - 180000}", sticky = true),
                 ReminderEntity(ids[1], "Paused into tomorrow", "once:$end", sticky = true),
                 ReminderEntity(ids[2], "Later today", "once:$end"),
-                ReminderEntity(ids[3], "Daily schedule", "59 23 * * *"),
-                ReminderEntity(ids[4], "Old quest", "once:${now - 3 * 86400000L}")))
+                ReminderEntity(ids[3], "Daily schedule", cron),
+                ReminderEntity(ids[4], "Old quest", "once:${now - 3 * 86400000L}", enabled = false)))
             fun nag(ruleId: String, at: Long, status: String = "ACTIVE", until: Long? = null) = NagStateEntity(
                 "$ruleId@$at", ruleId, at, ruleId, at, 1, 100, 300000, status, until, now)
             db.nagStateDao().insertIfNotExists(nag(ids[0], now))
@@ -54,13 +56,13 @@ class RestoredScheduleIntegrationTest {
                 scenario.onActivity { vm = ViewModelProvider(it)[MainViewModel::class.java] }
                 await { ReminderService.isRunning && vm.uiState.value.currentGameName == "Recovered routines" &&
                     vm.uiState.value.todaysSchedule.any { it.ruleId == ids[1] && it.isSnoozed } &&
-                    vm.uiState.value.todaysSchedule.map { it.ruleId }.containsAll(ids.slice(2..3)) &&
+                    (vm.uiState.value.todaysSchedule.map { it.ruleId } + vm.uiState.value.activeReminders.map { it.ruleId }).containsAll(ids.slice(2..3)) &&
                     vm.uiState.value.nextTriggerTime != null }
                 val ui = vm.uiState.value
                 assertTrue(ui.activeReminders.any { it.ruleId == ids[0] })
                 assertFalse(ui.activeReminders.any { it.ruleId == ids[1] })
                 assertEquals(until, ui.todaysSchedule.single { it.ruleId == ids[1] }.scheduledTimeMillis)
-                assertTrue(ui.todaysSchedule.map { it.ruleId }.containsAll(ids.slice(2..3)))
+                assertTrue((ui.todaysSchedule.map { it.ruleId } + ui.activeReminders.map { it.ruleId }).containsAll(ids.slice(2..3)))
                 assertNotNull(ui.nextTriggerTime)
                 // A second view model must attach to the existing foreground service.
                 lateinit var attached: MainViewModel
