@@ -25,7 +25,7 @@ for package in root.findall("package"):
         sources.append((int(count.attrib["missed"]), package.attrib["name"] + "/" + source.attrib["name"]))
 lines.extend(f"- {name}: {missing} uncovered lines" for missing, name in sorted(sources, reverse=True)[:20])
 summary = "\n".join(lines) + "\n"
-print(summary)
+print(summary, end="")
 if os.environ.get("GITHUB_STEP_SUMMARY"):
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
         output.write(summary)

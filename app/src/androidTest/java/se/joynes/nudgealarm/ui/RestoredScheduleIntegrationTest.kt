@@ -53,7 +53,9 @@ class RestoredScheduleIntegrationTest {
                 lateinit var vm: MainViewModel
                 scenario.onActivity { vm = ViewModelProvider(it)[MainViewModel::class.java] }
                 await { ReminderService.isRunning && vm.uiState.value.currentGameName == "Recovered routines" &&
-                    vm.uiState.value.todaysSchedule.any { it.ruleId == ids[1] && it.isSnoozed } }
+                    vm.uiState.value.todaysSchedule.any { it.ruleId == ids[1] && it.isSnoozed } &&
+                    vm.uiState.value.todaysSchedule.map { it.ruleId }.containsAll(ids.slice(2..3)) &&
+                    vm.uiState.value.nextTriggerTime != null }
                 val ui = vm.uiState.value
                 assertTrue(ui.activeReminders.any { it.ruleId == ids[0] })
                 assertFalse(ui.activeReminders.any { it.ruleId == ids[1] })

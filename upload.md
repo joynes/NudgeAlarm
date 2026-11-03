@@ -16,20 +16,23 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 ## Run UI Tests on an Emulator
 
-The Android SDK tools are installed at `/Users/joka/Library/Android/sdk`. Start the
-Android 16 test emulator when no device is already running:
+The Android SDK tools are installed at `/Users/joka/Library/Android/sdk`. Use the
+separate `NudgeAlarmCoverage` AVD (Pixel 6, Android 36.1, Google Play ARM64) so
+another project's emulator and installed apps remain untouched:
 
 ```bash
 /Users/joka/Library/Android/sdk/emulator/emulator \
-  -avd Medium_Phone_API_36.1 \
-  -no-audio -no-boot-anim -gpu swiftshader_indirect &
-/Users/joka/Library/Android/sdk/platform-tools/adb wait-for-device
+  -avd NudgeAlarmCoverage -port 5556 -partition-size 4096 \
+  -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect &
+/Users/joka/Library/Android/sdk/platform-tools/adb -s emulator-5556 wait-for-device
 ```
 
 Run all instrumented UI tests against that emulator:
 
 ```bash
-export ANDROID_SERIAL="emulator-5554"
+export ANDROID_SERIAL="emulator-5556"
+PATH="/Users/joka/Library/Android/sdk/platform-tools:$PATH" \
+  python3 scripts/prepare_test_device.py --serial "$ANDROID_SERIAL"
 ./gradlew connectedDebugAndroidTest
 ```
 
@@ -45,9 +48,9 @@ Accuracy → Improve Location Accuracy** before the geofence integration test.
 It needs Google Play services' network location provider as well as the main
 Location switch. A simulated position can be supplied with `adb emu geo fix 18.0 59.3`.
 
-If the existing emulator disk is full, add `-data /tmp/nudgealarm-ui-test.img
--partition-size 8192 -no-snapshot` to use a separate clean test disk while keeping
-the original AVD data.
+For combined JVM/emulator coverage and the 95% gate, follow `TESTING.md`.
+Keep several GB of host disk space free. Do not clear another project's emulator
+when the host or an AVD runs out of storage.
 
 ## Build Release APK and Play App Bundle
 

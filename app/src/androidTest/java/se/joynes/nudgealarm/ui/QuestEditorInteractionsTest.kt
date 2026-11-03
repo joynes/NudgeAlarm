@@ -51,7 +51,7 @@ class QuestEditorInteractionsTest {
         click("DELETE QUEST")
         compose.onNodeWithText("Delete this quest permanently?").assertIsDisplayed()
         assertFalse(events.any { it.startsWith("delete:") })
-        click("< CANCEL")
+        compose.onAllNodesWithText("< CANCEL")[1].performClick()
         click("DELETE QUEST"); click("DELETE")
         compose.onNodeWithTag("quest-save").assertDoesNotExist()
         assertEquals(listOf("move:weekday:1", "move:weekend:-1", "toggle:weekday", "load", "save", "delete:weekday"), events)

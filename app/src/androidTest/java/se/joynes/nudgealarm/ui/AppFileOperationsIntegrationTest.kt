@@ -160,6 +160,7 @@ class AppFileOperationsIntegrationTest(private val operation: String) {
             } else if (operation == "rename") {
                 compose.waitUntil(15000) { appState.getCurrentGameName() == "Renamed from menu" }
             } else if (operation == "copy_yaml") {
+                compose.waitUntil(15000) { compose.onAllNodesWithText("COPIED!").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithText("COPIED!").assertIsDisplayed()
                 val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
                 compose.runOnIdle { assertEquals(rule.title, ConfigLoader(context).loadFromString(clipboard.primaryClip!!.getItemAt(0).text.toString()).getOrThrow().reminders.single().title) }
