@@ -45,6 +45,11 @@ line coverage was **95.32% (8,694 / 9,121 executable lines)**. The signed releas
 APK and AAB built successfully; the release APK was also installed and cold
 started on the separate emulator.
 
+[GitHub run 41737761045](https://github.com/joynes/NudgeAlarm/actions/runs/41737761045)
+independently passed the same tests and the 95% gate on Linux/API 36, with
+**95.25% (8,688 / 9,121 executable lines)**. Both measurements include all
+handwritten application code.
+
 The gate tests check the real script: exactly 95% passes, 94.999% fails despite
 rounding to 95.00% for display, and a report without executable lines fails.
 Remaining uncovered lines stay in the denominator. The gate is applied afresh
