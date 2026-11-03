@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    jacoco
 }
 
 val keystoreProperties = Properties().apply {
@@ -12,6 +13,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
+    testCoverage { jacocoVersion = "0.8.13" }
     namespace = "se.joynes.nudgealarm"
     compileSdk {
         version = release(36)
@@ -29,15 +31,19 @@ android {
 
     signingConfigs {
         create("release") {
+            if (keystoreProperties.isNotEmpty()) {
             storeFile = file(keystoreProperties["storeFile"] as String)
             storePassword = keystoreProperties["storePassword"] as String
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String
+            }
         }
     }
 
     buildTypes {
         debug {
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
@@ -58,6 +64,31 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+jacoco { toolVersion = "0.8.13" }
+
+tasks.register<JacocoReport>("combinedDebugCoverage") {
+    group = "verification"
+    description = "Combine JVM and emulator coverage for all handwritten app code."
+    dependsOn("testDebugUnitTest", "connectedDebugAndroidTest")
+    executionData.setFrom(fileTree(layout.buildDirectory) {
+        include("outputs/unit_test_code_coverage/debugUnitTest/**/*.exec")
+        include("outputs/code_coverage/debugAndroidTest/**/*.ec")
+    })
+    classDirectories.setFrom(files(
+        fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
+            exclude("**/R.class", "**/R$*.class", "**/BuildConfig.class", "**/*_Impl*.class")
+        },
+        fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
+            exclude("**/R.class", "**/R$*.class", "**/BuildConfig.class", "**/*_Impl*.class")
+        }
+    ))
+    sourceDirectories.setFrom(files("src/main/java"))
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
     }
 }
 
