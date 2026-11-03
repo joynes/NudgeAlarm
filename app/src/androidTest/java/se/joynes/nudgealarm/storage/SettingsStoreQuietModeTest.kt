@@ -46,4 +46,21 @@ class SettingsStoreQuietModeTest {
         assertFalse(store.quietMode)
         assertEquals(0L, store.quietModeUntil)
     }
+
+    @Test fun futureQuietModeSurvivesReceiverAndManualDisableCancelsDeadline() {
+        val before = System.currentTimeMillis()
+        val until = QuietModeController.enableFor(context, 30)
+        assertTrue(until in (before + 30 * 60_000L)..(System.currentTimeMillis() + 30 * 60_000L))
+        assertFalse(QuietModeController.expireIfNeeded(context, before + 1000))
+        se.joynes.nudgealarm.service.QuietModeReceiver().onReceive(context, null)
+        assertTrue(store.quietMode)
+        assertEquals(until, store.quietModeUntil)
+        QuietModeController.disable(context, refreshService = false)
+        assertFalse(store.quietMode)
+        assertEquals(0, store.quietModeUntil)
+        assertFalse(QuietModeController.expireIfNeeded(context))
+        store.quietMode = true // Indefinite quiet mode has no expiry.
+        assertFalse(QuietModeController.expireIfNeeded(context, Long.MAX_VALUE))
+        assertTrue(store.quietMode)
+    }
 }

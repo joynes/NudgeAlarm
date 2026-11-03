@@ -13,6 +13,17 @@ import java.io.File
 class AnalyticsScreenTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun emptyHistoryExplainsTheNextStepAndTimeFiltersDispatch() {
+        val selected = mutableListOf<TimeRange>()
+        compose.setContent { NudgeAlarmTheme {
+            AnalyticsScreen(AnalyticsUiState(isLoading = false, hasData = false), { selected.add(it) }, {})
+        } }
+        compose.onNodeWithText("NO DATA YET").assertIsDisplayed()
+        compose.onNodeWithText("Complete some quests to unlock").assertIsDisplayed()
+        listOf("1W", "1M", "1Y", "ALL").forEach { compose.onNodeWithText(it).performClick() }
+        org.junit.Assert.assertEquals(TimeRange.entries.toList(), selected)
+    }
+
     @Test fun allOutcomesAreNamedAndBarsRevealExactCountsIncludingEmptyDays() {
         val days = listOf(ChartDataPoint(0, "", 0, 0, 0), ChartDataPoint(86_400_000, "", 3, 2, 1),
             ChartDataPoint(172_800_000, "", 0, 2, 0), ChartDataPoint(259_200_000, "", 0, 0, 3))

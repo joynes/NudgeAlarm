@@ -119,7 +119,9 @@ internal fun SnoozePickerDialog(
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + duration * 60_000L))
     }
 
-    AlertDialog(
+    // Keep only one Android dialog (and its native NumberPickers) attached at a time.
+    // The draft picker state lives above this branch and survives editing a shortcut.
+    if (!showShortcutEditor) AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title, color = MegadriveCyan) },

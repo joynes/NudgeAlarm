@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun installCrashLogger(context: Context) {
+internal fun installCrashLogger(context: Context) {
     val eventLog = EventLogStore(context)
     val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
     Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->

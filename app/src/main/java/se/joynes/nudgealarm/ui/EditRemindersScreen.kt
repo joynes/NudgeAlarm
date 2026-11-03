@@ -458,7 +458,7 @@ fun EditRemindersScreen(
 /**
  * Convert cron schedule to human-readable Swedish text.
  */
-private fun cronToReadable(schedule: String): String {
+internal fun cronToReadable(schedule: String): String {
     if (schedule.startsWith("once:")) {
         val timestamp = schedule.removePrefix("once:").toLongOrNull() ?: return schedule
         val dateFormat = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.ENGLISH)
@@ -522,7 +522,7 @@ private fun cronToReadable(schedule: String): String {
  * Determine accent color based on schedule frequency.
  * Red=sub-hourly, Orange=multi-daily, Gold=daily, Cyan=weekly, Green=monthly, Purple=rare/one-time
  */
-private fun frequencyColor(schedule: String): Color {
+internal fun frequencyColor(schedule: String): Color {
     if (schedule.startsWith("once:")) return MegadrivePurple
     return try {
         val cron = CronExpression.parse(schedule)

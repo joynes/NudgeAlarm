@@ -31,11 +31,16 @@ class MainScreenActionsTest(private val action: String) {
     private val events = mutableListOf<String>()
     private val preferences by lazy { se.joynes.nudgealarm.storage.SnoozePreferences(androidx.test.core.app.ApplicationProvider.getApplicationContext()) }
     private lateinit var originalConfig: se.joynes.nudgealarm.storage.SnoozeConfiguration
+    private var originalShortcuts = emptyList<se.joynes.nudgealarm.storage.SnoozeClockShortcut>()
     @Before fun prepareDuration() {
         originalConfig = preferences.configuration()
-        if (action.endsWith("snooze")) preferences.saveConfiguration(originalConfig.copy(durationPresets = listOf(15), quickPickCount = 1, adaptive = false))
+        originalShortcuts = preferences.clockShortcuts()
+        if (action.endsWith("snooze")) {
+            preferences.saveConfiguration(originalConfig.copy(durationPresets = listOf(15), quickPickCount = 1, adaptive = false, defaultMode = "duration"))
+            preferences.replaceClockShortcuts(emptyList())
+        }
     }
-    @After fun restoreDuration() { preferences.saveConfiguration(originalConfig) }
+    @After fun restoreDuration() { preferences.saveConfiguration(originalConfig); preferences.replaceClockShortcuts(originalShortcuts) }
     private fun click(text: String) {
         val node = compose.onNodeWithText(text)
         // Confirm buttons live outside the scrollable dialog body.

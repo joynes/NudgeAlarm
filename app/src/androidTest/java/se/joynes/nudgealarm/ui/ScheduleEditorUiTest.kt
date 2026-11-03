@@ -46,12 +46,17 @@ class ScheduleEditorUiTest(private val mode: String) {
                 assertEquals("*/15 * * * *", saved)
             }
             "monthly" -> {
+                click("1"); click("1"); click("Jan"); click("Jan")
                 click("1st"); click("15th"); click("1+15"); click("ALL MONTHS")
                 compose.onNodeWithTag("quest-save").performClick()
                 assertEquals("0 9 1,15 * *", saved)
             }
             "once" -> {
                 compose.onNodeWithText("ONE-TIME").assertExists()
+                val cal = java.util.Calendar.getInstance().apply { timeInMillis = 1793692800000 }
+                val date = "%04d-%02d-%02d".format(cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH) + 1, cal.get(java.util.Calendar.DAY_OF_MONTH))
+                click(date); click("CANCEL")
+                click(date); click("OK")
                 compose.onNodeWithTag("quest-save").performClick()
                 assertTrue(saved.startsWith("once:"))
                 assertNotNull(saved.removePrefix("once:").toLongOrNull())

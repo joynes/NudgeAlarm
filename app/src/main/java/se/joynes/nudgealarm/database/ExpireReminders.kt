@@ -1,6 +1,8 @@
 package se.joynes.nudgealarm.database
 
 import androidx.room.withTransaction
+import se.joynes.nudgealarm.core.cron.CronExpression
+import java.util.Calendar
 
 /** Bulk actions have the same durable statistics as individual actions. */
 internal suspend fun NagDatabase.finishPendingQuests(ruleIds: List<String>, outcome: NagStatus) = withTransaction {
@@ -8,8 +10,26 @@ internal suspend fun NagDatabase.finishPendingQuests(ruleIds: List<String>, outc
     val repository = NagRepository(nagStateDao())
     val analytics = AnalyticsRepository(nagHistoryDao())
     for (ruleId in ruleIds.distinct()) {
-        val nag = if (outcome == NagStatus.COMPLETED) repository.markDoneByRuleId(ruleId)
+        var nag = if (outcome == NagStatus.COMPLETED) repository.markDoneByRuleId(ruleId)
             else repository.markCancelledByRuleId(ruleId)
+        // Today's Schedule also contains quests that have not fired yet. Persist their
+        // scheduled occurrence, so the scheduler cannot start nagging after a bulk action.
+        if (nag == null) {
+            val rule = reminderDao().getById(ruleId)?.toReminderConfig() ?: continue
+            val dayStart = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val scheduled = runCatching {
+                if (rule.schedule.startsWith("once:")) rule.schedule.removePrefix("once:").toLong()
+                else CronExpression.parse(rule.schedule).nextTriggerTime(dayStart)
+            }.getOrNull() ?: continue
+            val (created, key) = repository.tryFire(rule, scheduled / 60_000 * 60_000)
+            if (created) {
+                if (outcome == NagStatus.COMPLETED) repository.markDone(key) else repository.markCancelled(key)
+                nag = repository.getByKey(key)
+            }
+        }
         if (nag != null) analytics.recordCompletion(nag, outcome)
     }
 }
