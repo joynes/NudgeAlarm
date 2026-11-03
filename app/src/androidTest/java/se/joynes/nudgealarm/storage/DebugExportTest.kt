@@ -39,6 +39,12 @@ class DebugExportTest {
     }
 
     @Test fun legacyAndMalformedEntriesDoNotEraseOtherEvents() {
+        // A real reminder service can append events concurrently. This codec regression
+        // owns its preferences so background lifecycle logs cannot change its fixture.
+        val context = object : android.content.ContextWrapper(this.context) {
+            override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences =
+                super.getSharedPreferences(if (name == "event_log") "legacy_event_codec_test" else name, mode)
+        }
         context.getSharedPreferences("event_log", Context.MODE_PRIVATE).edit().putString("events",
             """[{"type":"j","timestamp":1,"ruleId":"washer"},{"type":"ConfigLoaded","timestamp":2},{"type":"Debug","timestamp":3,"detail":"valid"}]""").commit()
         val log = EventLogStore(context)

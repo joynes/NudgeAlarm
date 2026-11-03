@@ -16,10 +16,17 @@ def adb(*command):
 
 adb("shell", "cmd", "location", "set-location-enabled", "true")
 adb("emu", "geo", "fix", "18.0", "59.3")
-adb("shell", "am", "start", "-a", "com.google.android.gms.location.settings.LOCATION_ACCURACY")
-for attempt in range(6):
-    adb("shell", "uiautomator", "dump", "/sdcard/coverage-location.xml")
-    root = ET.fromstring(adb("shell", "cat", "/sdcard/coverage-location.xml"))
+adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
+adb("shell", "wm", "dismiss-keyguard")
+for attempt in range(12):
+    adb("shell", "am", "start", "-a", "com.google.android.gms.location.settings.LOCATION_ACCURACY")
+    try:
+        adb("shell", "uiautomator", "dump", "/sdcard/coverage-location.xml")
+        root = ET.fromstring(adb("shell", "cat", "/sdcard/coverage-location.xml"))
+    except (subprocess.CalledProcessError, ET.ParseError):
+        # The system may finish booting before the first accessible window exists.
+        time.sleep(2)
+        continue
     switch = next((n for n in root.iter("node") if n.get("resource-id") == "android:id/switch_widget"), None)
     if switch is not None:
         if switch.get("checked") == "true":

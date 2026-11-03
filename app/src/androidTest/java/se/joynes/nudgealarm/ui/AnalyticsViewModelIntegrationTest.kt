@@ -12,7 +12,7 @@ import org.junit.Test
 import se.joynes.nudgealarm.database.*
 
 class AnalyticsViewModelIntegrationTest {
-    @Test fun allTimeRangesIncludeEachOutcomeAndEmptyDaysDoNotBreakAStreak() = runBlocking {
+    @Test fun allTimeRangesIncludeEachOutcomeAndEmptyDaysDoNotBreakAStreak(): Unit = runBlocking {
         val app = ApplicationProvider.getApplicationContext<Application>()
         val dao = NagDatabase.getInstance(app).nagHistoryDao()
         val previous = dao.getInRange(0, Long.MAX_VALUE)

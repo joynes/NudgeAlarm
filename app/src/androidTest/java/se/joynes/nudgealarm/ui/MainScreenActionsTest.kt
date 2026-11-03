@@ -19,7 +19,8 @@ class MainScreenActionsTest(private val action: String) {
         @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf(
             "share", "save", "copy", "paste_ok", "paste_failure", "rename", "new_game",
             "load_file", "export_data", "import_data", "event_log", "preset", "saved_game",
-            "delete_saved", "delete_quest", "complete_all"
+            "delete_saved", "delete_quest", "complete_all", "first_launch", "start_loaded",
+            "stop_service", "permission", "resume", "empty_day", "change_game", "edit_loaded"
         ).map { arrayOf(it) }
     }
     @get:Rule val compose = createComposeRule()
@@ -34,6 +35,14 @@ class MainScreenActionsTest(private val action: String) {
     @Test fun actionReachesTheCorrectCallbackAndDestructiveActionsRequireConfirmation() {
         compose.setContent { NudgeAlarmTheme { Fixture() } }
         when (action) {
+            "first_launch" -> { click("SELECT GAME"); compose.onNodeWithText("= SELECT GAME =").assertIsDisplayed() }
+            "start_loaded" -> { click(">> PRESS START"); assertEquals(listOf("start"), events) }
+            "stop_service" -> { click("> STOP GAME"); assertEquals(listOf("stop"), events) }
+            "permission" -> { click(">> ENABLE NOTIFICATIONS"); assertEquals(listOf("permission"), events) }
+            "resume" -> { compose.onNodeWithContentDescription("Unmute").performClick(); assertEquals(listOf("quiet:null"), events) }
+            "empty_day" -> { compose.onNodeWithText("All quests completed for today!").assertIsDisplayed(); assertTrue(events.isEmpty()) }
+            "change_game" -> { click("CHANGE GAME"); click(PRESET_CONFIGS.first().name); assertEquals(listOf("preset:fitness_focus"), events) }
+            "edit_loaded" -> { click("EDIT QUESTS"); assertEquals(listOf("edit-list"), events) }
             "load_file" -> { click("> LOAD FROM FILE"); assertEquals(listOf("file"), events) }
             "export_data" -> { click("> EXPORT DATA"); assertEquals(listOf("export"), events) }
             "import_data" -> { click("> IMPORT DATA"); assertEquals(listOf("import"), events) }
@@ -93,15 +102,16 @@ class MainScreenActionsTest(private val action: String) {
     }
 
     @Composable private fun Fixture() {
-        var menu by remember { mutableStateOf(action !in listOf("delete_quest", "complete_all")) }
+        var menu by remember { mutableStateOf(action !in listOf("delete_quest", "complete_all", "first_launch", "start_loaded", "permission", "resume", "empty_day", "change_game", "edit_loaded")) }
         val clipboard = LocalClipboardManager.current
         LaunchedEffect(Unit) { clipboard.setText(AnnotatedString("fixture yaml")) }
         MainScreen(
-            uiState = MainUiState(isServiceRunning = true, hasGameLoaded = true, currentGameName = "Test", totalRulesCount = 2,
-                activeReminders = listOf(ActiveReminderUi("a", "Laundry", "09:00"), ActiveReminderUi("b", "Dishes", "09:00")),
+            uiState = MainUiState(isServiceRunning = action !in listOf("first_launch", "start_loaded", "change_game", "edit_loaded"),
+                hasGameLoaded = action != "first_launch", currentGameName = if (action == "first_launch") null else "Test", totalRulesCount = 2,
+                activeReminders = if (action in listOf("first_launch", "start_loaded", "empty_day", "change_game", "edit_loaded")) emptyList() else listOf(ActiveReminderUi("a", "Laundry", "09:00"), ActiveReminderUi("b", "Dishes", "09:00")),
                 savedGames = listOf(SavedGame("saved", "My saved game", 2, false))),
-            hasNotificationPermission = true, quietMode = false, onSetQuietMode = {}, onMenuClick = { menu = true },
-            showMenu = menu, onMenuDismiss = { menu = false }, onRequestNotificationPermission = {},
+            hasNotificationPermission = action != "permission", quietMode = action == "resume", onSetQuietMode = { events.add("quiet:$it") }, onMenuClick = { menu = true },
+            showMenu = menu, onMenuDismiss = { menu = false }, onRequestNotificationPermission = { events.add("permission") },
             onSelectFile = { events.add("file") }, onSaveGame = { events.add("save") }, onShareGame = { events.add("share") },
             onRenameGame = { events.add("rename:$it") },
             onExportToClipboard = { result -> events.add("copy"); result("reminders: []") },
@@ -110,7 +120,7 @@ class MainScreenActionsTest(private val action: String) {
             onLoadPreset = { events.add("preset:$it") }, onLoadSavedGame = { events.add("load:${it.id}") },
             onDeleteSavedGame = { events.add("delete:$it") },
             onCreateNewSchema = { name, done -> events.add("new:$name"); done() },
-            onStartService = {}, onStopService = {}, onNavigateToPermissions = {},
+            onStartService = { events.add("start") }, onStopService = { events.add("stop") }, onNavigateToPermissions = {},
             onNavigateToEventLog = { events.add("log") }, onNavigateToRoutines = {},
             onNavigateToEditReminders = { events.add("edit-list") }, onEditReminder = {}, onMarkDone = {},
             onMarkAllDone = { events.add("done:${it.joinToString(",")}") }, onSnooze = { _, _ -> },
