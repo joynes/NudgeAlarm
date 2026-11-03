@@ -19,7 +19,9 @@ lines = [f"Line coverage: {percentage:.2f}% ({covered}/{total}); target {args.mi
 sources = []
 for package in root.findall("package"):
     for source in package.findall("sourcefile"):
-        count = next(c for c in source.findall("counter") if c.attrib["type"] == "LINE")
+        count = next((c for c in source.findall("counter") if c.attrib["type"] == "LINE"), None)
+        if count is None:  # Interfaces without executable code have no line counter.
+            continue
         sources.append((int(count.attrib["missed"]), package.attrib["name"] + "/" + source.attrib["name"]))
 lines.extend(f"- {name}: {missing} uncovered lines" for missing, name in sorted(sources, reverse=True)[:20])
 summary = "\n".join(lines) + "\n"
