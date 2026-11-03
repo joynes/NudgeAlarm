@@ -37,8 +37,11 @@ jobs:
           api-level: 36
           target: google_apis
           arch: x86_64
+          profile: pixel_6
           disable-animations: true
-          script: ./gradlew combinedDebugCoverage --stacktrace
+          script: |
+            python3 scripts/prepare_test_device.py
+            ./gradlew combinedDebugCoverage --stacktrace
       - name: Coverage summary and 95 percent target
         if: success()
         run: python3 scripts/check_coverage.py app/build/reports/jacoco/combinedDebugCoverage/combinedDebugCoverage.xml --minimum 95

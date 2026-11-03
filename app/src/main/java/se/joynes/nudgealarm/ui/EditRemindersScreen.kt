@@ -100,7 +100,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 
-private enum class ScheduleMode { VECKA, MANAD, ENGANG, CRON }
+internal enum class ScheduleMode { VECKA, MANAD, ENGANG, CRON }
 
 @Composable
 fun EditRemindersScreen(
@@ -635,7 +635,7 @@ private fun CompactQuestRow(
     }
 }
 
-private fun parseCronSchedule(schedule: String): Triple<Int, Int, Set<Int>>? {
+internal fun parseCronSchedule(schedule: String): Triple<Int, Int, Set<Int>>? {
     if (schedule.startsWith("once:")) {
         val timestamp = schedule.removePrefix("once:").toLongOrNull() ?: return null
         val cal = java.util.Calendar.getInstance()
@@ -672,7 +672,7 @@ private fun parseCronSchedule(schedule: String): Triple<Int, Int, Set<Int>>? {
     return Triple(hour, minute, selectedDays)
 }
 
-private fun buildCronSchedule(hour: Int, minute: Int, selectedDays: Set<Int>): String {
+internal fun buildCronSchedule(hour: Int, minute: Int, selectedDays: Set<Int>): String {
     val dayPart = when {
         selectedDays.isEmpty() || selectedDays.size == 7 -> "*"
         selectedDays == setOf(1, 2, 3, 4, 5) -> "1-5"
@@ -687,7 +687,7 @@ private fun buildCronSchedule(hour: Int, minute: Int, selectedDays: Set<Int>): S
     return "$minute $hour * * $dayPart"
 }
 
-private fun parseCronFieldToSet(field: String, range: IntRange): Set<Int> {
+internal fun parseCronFieldToSet(field: String, range: IntRange): Set<Int> {
     if (field == "*") return range.toSet()
     return field.split(",").flatMap { part ->
         if (part.contains("-")) {
@@ -701,13 +701,13 @@ private fun parseCronFieldToSet(field: String, range: IntRange): Set<Int> {
     }.toSet()
 }
 
-private fun buildMonthlyCronSchedule(hour: Int, minute: Int, daysOfMonth: Set<Int>, months: Set<Int>): String {
+internal fun buildMonthlyCronSchedule(hour: Int, minute: Int, daysOfMonth: Set<Int>, months: Set<Int>): String {
     val dayPart = if (daysOfMonth.isEmpty()) "1" else daysOfMonth.sorted().joinToString(",")
     val monthPart = if (months.isEmpty() || months.size == 12) "*" else months.sorted().joinToString(",")
     return "$minute $hour $dayPart $monthPart *"
 }
 
-private fun detectScheduleMode(schedule: String?): ScheduleMode {
+internal fun detectScheduleMode(schedule: String?): ScheduleMode {
     if (schedule == null) return ScheduleMode.VECKA
     if (schedule.startsWith("once:")) return ScheduleMode.ENGANG
     val parts = schedule.trim().split(Regex("\\s+"))

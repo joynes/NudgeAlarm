@@ -43,7 +43,8 @@ class GameLifecycleIntegrationTest {
                 model.updateCurrentGameQuestCount()
                 await { SavedGamesStore(app).get(id)?.questCount == 1 }
                 model.saveCurrentGame()
-                await { SavedGamesStore(app).get(id)?.filePath != null }
+                val internalSave = java.io.File(app.filesDir, "game_$id.yaml")
+                await { internalSave.exists() && ConfigLoader(app).loadFromUri(android.net.Uri.fromFile(internalSave)).getOrNull()?.reminders?.size == 1 }
                 val saved = SavedGamesStore(app).get(id)!!
                 assertEquals("Renamed routines", saved.name)
                 val exported = model.exportToClipboard()!!
