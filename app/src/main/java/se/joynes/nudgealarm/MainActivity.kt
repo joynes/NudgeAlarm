@@ -275,7 +275,9 @@ fun NudgeAlarmApp(placeRequest: String? = null, onPlaceRequestConsumed: () -> Un
                         ?: error("Could not open output file")
                 }
             }
-            android.widget.Toast.makeText(context, if (result.isSuccess) "Debug report saved" else "Debug export failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                android.widget.Toast.makeText(context, if (result.isSuccess) "Debug report saved" else "Debug export failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 

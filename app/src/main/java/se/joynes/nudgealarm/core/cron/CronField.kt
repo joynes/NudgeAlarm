@@ -55,6 +55,7 @@ sealed class CronField {
                     slashParts[0] == "*" -> min to max
                     slashParts[0].contains("-") -> {
                         val rangeParts = slashParts[0].split("-")
+                        require(rangeParts.size == 2) { "Invalid step range: $field" }
                         val s = rangeParts[0].toIntOrNull()
                             ?: throw IllegalArgumentException("Invalid range start: ${rangeParts[0]}")
                         val e = rangeParts[1].toIntOrNull()
@@ -67,7 +68,7 @@ sealed class CronField {
                         s to max
                     }
                 }
-                if (start < min || end > max) throw IllegalArgumentException("Step range out of bounds: $field")
+                if (start < min || end > max || start > end) throw IllegalArgumentException("Step range out of bounds: $field")
                 return Step(start, end, stepVal)
             }
 
@@ -89,10 +90,12 @@ sealed class CronField {
                     val values = field.split(",").flatMap { part ->
                         if (part.contains("-")) {
                             val rangeParts = part.split("-")
+                            require(rangeParts.size == 2) { "Invalid list range: $part" }
                             val start = rangeParts[0].toIntOrNull()
                                 ?: throw IllegalArgumentException("Invalid value: ${rangeParts[0]}")
                             val end = rangeParts[1].toIntOrNull()
                                 ?: throw IllegalArgumentException("Invalid value: ${rangeParts[1]}")
+                            require(start >= min && end <= max && start <= end) { "List range out of bounds: $part" }
                             (start..end).toList()
                         } else {
                             val value = part.toIntOrNull()

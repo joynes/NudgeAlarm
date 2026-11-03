@@ -144,6 +144,7 @@ fun MainScreen(
     var renameGameName by remember { mutableStateOf("") }
     var showCompleteAllConfirm by remember { mutableStateOf(false) }
     var showAbandonAllConfirm by remember { mutableStateOf(false) }
+    var abandonScheduledQuests by remember { mutableStateOf(false) }
     var activeAllButtonShowsAbandon by remember { mutableStateOf(false) }
     var showCompleteRemainingConfirm by remember { mutableStateOf(false) }
     var showQuietModeDialog by remember { mutableStateOf(false) }
@@ -272,6 +273,7 @@ fun MainScreen(
                                 OutlinedButton(
                                     onClick = {
                                         if (activeAllButtonShowsAbandon) {
+                                            abandonScheduledQuests = false
                                             showAbandonAllConfirm = true
                                             activeAllButtonShowsAbandon = false
                                         } else {
@@ -373,7 +375,7 @@ fun MainScreen(
                             Text("COMPLETE ALL", style = MaterialTheme.typography.labelSmall, color = MegadriveGreen)
                         }
                         OutlinedButton(
-                            onClick = { showAbandonAllConfirm = true },
+                            onClick = { abandonScheduledQuests = true; showAbandonAllConfirm = true },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(4.dp),
                             border = BorderStroke(1.dp, MegadriveOrange),
@@ -1270,6 +1272,8 @@ fun MainScreen(
 
     // === ABANDON ALL CONFIRMATION ===
     if (showAbandonAllConfirm) {
+        val ruleIds = if (abandonScheduledQuests) uiState.todaysSchedule.map { it.ruleId }
+            else uiState.activeReminders.map { it.ruleId }
         AlertDialog(
             onDismissRequest = {
                 showAbandonAllConfirm = false
@@ -1286,14 +1290,14 @@ fun MainScreen(
             },
             text = {
                 Text(
-                    text = "Abandon all ${uiState.activeReminders.size} active quests?",
+                    text = "Abandon all ${ruleIds.size} ${if (abandonScheduledQuests) "scheduled" else "active"} quests?",
                     color = MaterialTheme.colorScheme.onSurface
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onCancelAll(uiState.activeReminders.map { it.ruleId })
+                        onCancelAll(ruleIds)
                         showAbandonAllConfirm = false
                         activeAllButtonShowsAbandon = false
                     },

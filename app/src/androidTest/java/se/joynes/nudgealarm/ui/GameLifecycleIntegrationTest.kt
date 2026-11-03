@@ -39,12 +39,13 @@ class GameLifecycleIntegrationTest {
                 model.renameCurrentGame("  Renamed routines  ")
                 await { model.uiState.value.currentGameName == "Renamed routines" }
                 val repository = se.joynes.nudgealarm.database.ReminderRepository(db.reminderDao())
-                val rule = repository.create("Laundry", "0 9 * * *", sticky = true)
+                val rule = repository.create("Laundry \"delicate\"\nSecond line", "0 9 * * *", sticky = true)
                 model.updateCurrentGameQuestCount()
                 await { SavedGamesStore(app).get(id)?.questCount == 1 }
                 model.saveCurrentGame()
                 val internalSave = java.io.File(app.filesDir, "game_$id.yaml")
-                await { internalSave.exists() && ConfigLoader(app).loadFromUri(android.net.Uri.fromFile(internalSave)).getOrNull()?.reminders?.size == 1 }
+                await { internalSave.exists() && internalSave.length() > 0 }
+                assertEquals(rule.title, ConfigLoader(app).loadFromUri(android.net.Uri.fromFile(internalSave)).getOrThrow().reminders.single().title)
                 val saved = SavedGamesStore(app).get(id)!!
                 assertEquals("Renamed routines", saved.name)
                 val exported = model.exportToClipboard()!!

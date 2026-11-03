@@ -8,6 +8,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import se.joynes.nudgealarm.storage.SavedGame
@@ -21,10 +23,19 @@ class MainScreenActionsTest(private val action: String) {
             "load_file", "export_data", "import_data", "event_log", "preset", "saved_game",
             "delete_saved", "delete_quest", "complete_all", "first_launch", "start_loaded",
             "stop_service", "permission", "resume", "empty_day", "change_game", "edit_loaded"
+            , "scheduled_complete", "scheduled_abandon", "scheduled_snooze", "scheduled_complete_all",
+            "scheduled_abandon_all", "active_abandon_all", "active_snooze"
         ).map { arrayOf(it) }
     }
     @get:Rule val compose = createComposeRule()
     private val events = mutableListOf<String>()
+    private val preferences by lazy { se.joynes.nudgealarm.storage.SnoozePreferences(androidx.test.core.app.ApplicationProvider.getApplicationContext()) }
+    private lateinit var originalConfig: se.joynes.nudgealarm.storage.SnoozeConfiguration
+    @Before fun prepareDuration() {
+        originalConfig = preferences.configuration()
+        if (action.endsWith("snooze")) preferences.saveConfiguration(originalConfig.copy(durationPresets = listOf(15), quickPickCount = 1, adaptive = false))
+    }
+    @After fun restoreDuration() { preferences.saveConfiguration(originalConfig) }
     private fun click(text: String) {
         val node = compose.onNodeWithText(text)
         // Confirm buttons live outside the scrollable dialog body.
@@ -35,6 +46,30 @@ class MainScreenActionsTest(private val action: String) {
     @Test fun actionReachesTheCorrectCallbackAndDestructiveActionsRequireConfirmation() {
         compose.setContent { NudgeAlarmTheme { Fixture() } }
         when (action) {
+            "scheduled_complete", "scheduled_abandon", "scheduled_snooze" -> {
+                compose.onNodeWithTag("scheduled-quest-a").performScrollTo().performClick()
+                when (action) {
+                    "scheduled_complete" -> { click("QUEST COMPLETE!"); assertEquals(listOf("done-one:a"), events) }
+                    "scheduled_abandon" -> { click("ABANDON QUEST"); assertEquals(listOf("cancel:a"), events) }
+                    else -> { click("SNOOZE · CHOOSE WHEN"); compose.onNodeWithTag("quick_pick_15").performScrollTo().performClick(); assertEquals(listOf("snooze:a:15"), events) }
+                }
+            }
+            "scheduled_complete_all", "scheduled_abandon_all" -> {
+                val label = if (action == "scheduled_complete_all") "COMPLETE ALL" else "ABANDON ALL"
+                click(label); assertTrue(events.isEmpty())
+                compose.onAllNodesWithText(label).filterToOne(hasAnyAncestor(isDialog())).performClick()
+                assertEquals(listOf(if (action == "scheduled_complete_all") "done:a,b" else "cancel-all:a,b"), events)
+            }
+            "active_abandon_all" -> {
+                click("COMPLETE ALL"); click("ABANDON ALL? >"); click("ABANDON ALL")
+                compose.onAllNodesWithText("ABANDON ALL").filterToOne(hasAnyAncestor(isDialog())).performClick()
+                assertEquals(listOf("cancel-all:a,b"), events)
+            }
+            "active_snooze" -> {
+                compose.onAllNodesWithText("SNOOZE")[0].performScrollTo().performClick()
+                compose.onNodeWithTag("quick_pick_15").performScrollTo().performClick()
+                assertEquals(listOf("snooze:a:15"), events)
+            }
             "first_launch" -> { click("SELECT GAME"); compose.onNodeWithText("= SELECT GAME =").assertIsDisplayed() }
             "start_loaded" -> { click(">> PRESS START"); assertEquals(listOf("start"), events) }
             "stop_service" -> { click("> STOP GAME"); assertEquals(listOf("stop"), events) }
@@ -102,13 +137,15 @@ class MainScreenActionsTest(private val action: String) {
     }
 
     @Composable private fun Fixture() {
-        var menu by remember { mutableStateOf(action !in listOf("delete_quest", "complete_all", "first_launch", "start_loaded", "permission", "resume", "empty_day", "change_game", "edit_loaded")) }
+        val scheduled = action.startsWith("scheduled_")
+        var menu by remember { mutableStateOf(!scheduled && !action.startsWith("active_") && action !in listOf("delete_quest", "complete_all", "first_launch", "start_loaded", "permission", "resume", "empty_day", "change_game", "edit_loaded")) }
         val clipboard = LocalClipboardManager.current
         LaunchedEffect(Unit) { clipboard.setText(AnnotatedString("fixture yaml")) }
         MainScreen(
             uiState = MainUiState(isServiceRunning = action !in listOf("first_launch", "start_loaded", "change_game", "edit_loaded"),
                 hasGameLoaded = action != "first_launch", currentGameName = if (action == "first_launch") null else "Test", totalRulesCount = 2,
-                activeReminders = if (action in listOf("first_launch", "start_loaded", "empty_day", "change_game", "edit_loaded")) emptyList() else listOf(ActiveReminderUi("a", "Laundry", "09:00"), ActiveReminderUi("b", "Dishes", "09:00")),
+                activeReminders = if (scheduled) listOf(ActiveReminderUi("active", "Other quest", "08:00")) else if (action in listOf("first_launch", "start_loaded", "empty_day", "change_game", "edit_loaded")) emptyList() else listOf(ActiveReminderUi("a", "Laundry", "09:00", snoozeCount = if (action == "active_snooze") 1 else 0), ActiveReminderUi("b", "Dishes", "09:00")),
+                todaysSchedule = if (scheduled) listOf(ScheduledReminderUi("a", "Laundry", "09:00", System.currentTimeMillis() + 60000, schedule = "0 9 * * *"), ScheduledReminderUi("b", "Dishes", "10:00", System.currentTimeMillis() + 120000, schedule = "0 10 * * *")) else emptyList(),
                 savedGames = listOf(SavedGame("saved", "My saved game", 2, false))),
             hasNotificationPermission = action != "permission", quietMode = action == "resume", onSetQuietMode = { events.add("quiet:$it") }, onMenuClick = { menu = true },
             showMenu = menu, onMenuDismiss = { menu = false }, onRequestNotificationPermission = { events.add("permission") },
@@ -122,8 +159,8 @@ class MainScreenActionsTest(private val action: String) {
             onCreateNewSchema = { name, done -> events.add("new:$name"); done() },
             onStartService = { events.add("start") }, onStopService = { events.add("stop") }, onNavigateToPermissions = {},
             onNavigateToEventLog = { events.add("log") }, onNavigateToRoutines = {},
-            onNavigateToEditReminders = { events.add("edit-list") }, onEditReminder = {}, onMarkDone = {},
-            onMarkAllDone = { events.add("done:${it.joinToString(",")}") }, onSnooze = { _, _ -> },
-            onCancel = {}, onCancelAll = {}, onDeletePermanently = { events.add("remove:$it") })
+            onNavigateToEditReminders = { events.add("edit-list") }, onEditReminder = {}, onMarkDone = { events.add("done-one:$it") },
+            onMarkAllDone = { events.add("done:${it.joinToString(",")}") }, onSnooze = { id, minutes -> events.add("snooze:$id:$minutes") },
+            onCancel = { events.add("cancel:$it") }, onCancelAll = { events.add("cancel-all:${it.joinToString(",")}") }, onDeletePermanently = { events.add("remove:$it") })
     }
 }

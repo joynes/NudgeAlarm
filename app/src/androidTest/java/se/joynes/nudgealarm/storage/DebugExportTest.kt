@@ -16,7 +16,10 @@ import se.joynes.nudgealarm.location.GeofenceSpec
 
 @RunWith(AndroidJUnit4::class)
 class DebugExportTest {
-    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val context = object : android.content.ContextWrapper(ApplicationProvider.getApplicationContext<Context>()) {
+        override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences =
+            super.getSharedPreferences("debug_export_test_$name", mode)
+    }
 
     @Test fun reportContainsPresenceHistoryAndLogsWithoutResettingPresence() = runBlocking {
         val store = GeofenceStateStore(context)

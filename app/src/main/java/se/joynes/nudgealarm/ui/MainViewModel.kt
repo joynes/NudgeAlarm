@@ -31,6 +31,7 @@ import se.joynes.nudgealarm.storage.EventLogStore
 import se.joynes.nudgealarm.storage.SavedGame
 import se.joynes.nudgealarm.storage.SavedGamesStore
 import se.joynes.nudgealarm.storage.SettingsStore
+import se.joynes.nudgealarm.storage.QuestYamlExporter.yamlString
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import java.io.File
@@ -378,13 +379,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appendLine()
                     appendLine("reminders:")
                     configs.forEach { config ->
-                        appendLine("  - id: ${config.id}")
-                        appendLine("    title: \"${config.title}\"")
+                        appendLine("  - id: ${yamlString(config.id)}")
+                        appendLine("    title: ${yamlString(config.title)}")
                         appendLine("    schedule: \"${config.schedule}\"")
                         appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                         appendLine("    max_nags: ${config.maxNags}")
                         appendLine("    sticky: ${config.sticky}")
-                        config.placeId?.let { appendLine("    place_id: \"$it\"") }
+                        config.placeId?.let { appendLine("    place_id: ${yamlString(it)}") }
                         appendLine("    sound: ${config.sound}")
                         appendLine("    vibration: ${config.vibration}")
                         appendLine("    snooze_options:")
@@ -428,13 +429,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appendLine()
                     appendLine("reminders:")
                     configs.forEach { config ->
-                        appendLine("  - id: ${config.id}")
-                        appendLine("    title: \"${config.title}\"")
+                        appendLine("  - id: ${yamlString(config.id)}")
+                        appendLine("    title: ${yamlString(config.title)}")
                         appendLine("    schedule: \"${config.schedule}\"")
                         appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                         appendLine("    max_nags: ${config.maxNags}")
                         appendLine("    sticky: ${config.sticky}")
-                        config.placeId?.let { appendLine("    place_id: \"$it\"") }
+                        config.placeId?.let { appendLine("    place_id: ${yamlString(it)}") }
                         appendLine()
                     }
                 }
@@ -811,13 +812,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val yaml = buildString {
                 appendLine("reminders:")
                 allConfigs.forEach { config ->
-                    appendLine("  - id: ${config.id}")
-                    appendLine("    title: \"${config.title}\"")
+                    appendLine("  - id: ${yamlString(config.id)}")
+                    appendLine("    title: ${yamlString(config.title)}")
                     appendLine("    schedule: \"${config.schedule}\"")
                     appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                     appendLine("    max_nags: ${config.maxNags}")
                     appendLine("    sticky: ${config.sticky}")
-                    config.placeId?.let { appendLine("    place_id: \"$it\"") }
+                    config.placeId?.let { appendLine("    place_id: ${yamlString(it)}") }
                 }
             }
 
@@ -915,13 +916,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val yaml = buildString {
             appendLine("reminders:")
             configs.forEach { config ->
-                appendLine("  - id: ${config.id}")
-                appendLine("    title: \"${config.title}\"")
+                appendLine("  - id: ${yamlString(config.id)}")
+                appendLine("    title: ${yamlString(config.title)}")
                 appendLine("    schedule: \"${config.schedule}\"")
                 appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                 appendLine("    max_nags: ${config.maxNags}")
                 appendLine("    sticky: ${config.sticky}")
-                config.placeId?.let { appendLine("    place_id: \"$it\"") }
+                config.placeId?.let { appendLine("    place_id: ${yamlString(it)}") }
                 appendLine("    sound: ${config.sound}")
                 appendLine("    vibration: ${config.vibration}")
                 appendLine("    snooze_options:")
@@ -1329,13 +1330,13 @@ reminders:
         return buildString {
             appendLine("reminders:")
             configs.forEach { config ->
-                appendLine("  - id: ${config.id}")
-                appendLine("    title: \"${config.title}\"")
+                appendLine("  - id: ${yamlString(config.id)}")
+                appendLine("    title: ${yamlString(config.title)}")
                 appendLine("    schedule: \"${config.schedule}\"")
                 appendLine("    nag_interval: ${config.nagInterval.inWholeMinutes}m")
                 appendLine("    max_nags: ${config.maxNags}")
                 appendLine("    sticky: ${config.sticky}")
-                config.placeId?.let { appendLine("    place_id: \"$it\"") }
+                config.placeId?.let { appendLine("    place_id: ${yamlString(it)}") }
             }
         }
     }

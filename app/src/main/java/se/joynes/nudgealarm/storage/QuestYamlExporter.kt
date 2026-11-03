@@ -31,7 +31,7 @@ object QuestYamlExporter {
         }
     }
 
-    private fun yamlString(value: String): String = buildString {
+    internal fun yamlString(value: String): String = buildString {
         append('"')
         value.forEach { char ->
             when (char) {

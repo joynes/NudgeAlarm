@@ -321,8 +321,8 @@ internal fun DurationWheel(label: String, value: Int, maximum: Int, tag: String,
                 }
             },
             update = { picker ->
-                picker.textColor = color
-                picker.textSize = textSize
+                if (picker.textColor != color) picker.textColor = color
+                if (picker.textSize != textSize) picker.textSize = textSize
                 if (picker.value != value) picker.value = value
             }
         )
